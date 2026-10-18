@@ -16,6 +16,7 @@ export default function ClaudeGuideScreen() {
     <Text style={styles.copy}>A assinatura é usada pelo Claude Code no GitHub Actions. O aplicativo não guarda sua credencial Claude.</Text>
     {steps.map(([title, text]) => <View key={title} style={styles.card}><Text style={styles.cardTitle}>{title}</Text><Text style={styles.cardText}>{text}</Text></View>)}
     <View style={styles.warning}><Text style={styles.warningTitle}>Importante</Text><Text style={styles.cardText}>O token é uma credencial sensível. Este app não consegue gerá-lo: a Anthropic exige o login pelo Claude Code. Depois de salvo como Secret, todo o uso diário pode ser feito pelo GitHub e pelo celular.</Text></View>
+    <Link href="/setup-claude-subscription" style={styles.link}>Enviar token cifrado ao GitHub</Link>
     <Link href="/connect-claude" style={styles.link}>Ver conexão Claude API</Link>
   </ScrollView>
 }
