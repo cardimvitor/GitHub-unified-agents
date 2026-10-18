@@ -29,7 +29,7 @@ export default function SharedChatScreen() {
         .map((entry) => `${entry.author}: ${entry.text}`)
         .join('\n\n')
       const answer = await askProvider(provider, `Responda em português, quando apropriado. Conversa compartilhada:\n\n${transcript}`)
-      setEntries((current) => [...current, { author: providerName, text: answer }])
+      setEntries((current) => [...current, { author: `${providerName} · ${answer.model}`, text: answer.text }])
     } catch (error) {
       setEntries((current) => [...current, { author: providerName, text: error instanceof Error ? error.message : 'Não foi possível obter resposta.' }])
     } finally {
@@ -39,7 +39,7 @@ export default function SharedChatScreen() {
 
   return <View style={styles.page}>
     <Text style={styles.title}>Planejamento compartilhado</Text>
-    <Text style={styles.copy}>O histórico fica neste aparelho. Alterne o provider para pedir uma segunda opinião sobre o mesmo contexto.</Text>
+    <Text style={styles.copy}>O histórico fica só nesta tela e some ao sair. Alterne o provider para pedir uma segunda opinião sobre o mesmo contexto. O modelo usado é sempre o mais recente que o provider publica.</Text>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.providers}>
       {providers.map((item) => <Pressable key={item.id} onPress={() => setProvider(item.id)} style={[styles.pill, provider === item.id && styles.pillSelected]}><Text style={styles.pillText}>{item.label}</Text></Pressable>)}
     </ScrollView>

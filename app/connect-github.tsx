@@ -1,5 +1,5 @@
 import * as Linking from 'expo-linking'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { beginGitHubDeviceAuthorization, pollGitHubAccessToken } from '@/github/device-auth'
 import { getAuthenticatedGitHubUser } from '@/github/repository'
@@ -11,8 +11,12 @@ export default function ConnectGitHubScreen() {
   const [pat, setPat] = useState('')
   const [message, setMessage] = useState('O login usa o fluxo seguro de dispositivo do GitHub.')
   const [busy, setBusy] = useState(false)
+  const attempt = useRef(0)
+
+  useEffect(() => () => { attempt.current += 1 }, [])
 
   async function connect() {
+    const current = ++attempt.current
     setBusy(true)
     try {
       const authorization = await beginGitHubDeviceAuthorization()
@@ -21,21 +25,22 @@ export default function ConnectGitHubScreen() {
       await Linking.openURL(authorization.verificationUri)
       const deadline = Date.now() + authorization.expiresIn * 1000
       let interval = authorization.interval * 1000
-      while (Date.now() < deadline) {
+      while (current === attempt.current && Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, interval))
-        const token = await pollGitHubAccessToken(authorization.deviceCode)
-        if (token) {
-          await githubSession.save(token)
+        if (current !== attempt.current) return
+        const result = await pollGitHubAccessToken(authorization.deviceCode)
+        if ('token' in result) {
+          await githubSession.save(result.token)
           setMessage('GitHub conectado com sucesso. O token está protegido no armazenamento seguro do dispositivo.')
           return
         }
-        interval = Math.max(interval, 5000)
+        if (result.status === 'slow_down') interval += 5000
       }
-      setMessage('O código expirou. Tente novamente.')
+      if (current === attempt.current) setMessage('O código expirou. Tente novamente.')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Não foi possível conectar ao GitHub.')
+      if (current === attempt.current) setMessage(error instanceof Error ? error.message : 'Não foi possível conectar ao GitHub.')
     } finally {
-      setBusy(false)
+      if (current === attempt.current) setBusy(false)
     }
   }
 

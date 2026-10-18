@@ -43,7 +43,9 @@ export async function beginGitHubDeviceAuthorization(): Promise<DeviceAuthorizat
   }
 }
 
-export async function pollGitHubAccessToken(deviceCode: string): Promise<string | null> {
+export type GitHubPoll = { token: string } | { status: 'pending' | 'slow_down' }
+
+export async function pollGitHubAccessToken(deviceCode: string): Promise<GitHubPoll> {
   const response = await fetch(ACCESS_TOKEN_URL, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -55,7 +57,8 @@ export async function pollGitHubAccessToken(deviceCode: string): Promise<string 
   })
   if (!response.ok) throw await githubError(response, 'Falha ao verificar o login no GitHub')
   const payload = (await response.json()) as TokenResponse
-  if (payload.access_token) return payload.access_token
-  if (payload.error === 'authorization_pending' || payload.error === 'slow_down') return null
+  if (payload.access_token) return { token: payload.access_token }
+  if (payload.error === 'authorization_pending') return { status: 'pending' }
+  if (payload.error === 'slow_down') return { status: 'slow_down' }
   throw new Error('A autorização no GitHub não foi concluída.')
 }

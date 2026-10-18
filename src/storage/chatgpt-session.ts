@@ -9,7 +9,7 @@ export type ChatGptPlanSession = {
   clientId: string
   subject: string
   email?: string | null
-  scopes: string[]
+  accountId: string
   expiresAt?: number
 }
 
