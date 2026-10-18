@@ -3,8 +3,8 @@
   "android": {
     "modules": ["expo.modules.chatgptauth.ChatGptAuthModule"],
     "publication": {
-      "group": "expo.modules.chatgptauth",
-      "id": "chatgpt-auth",
+      "groupId": "expo.modules.chatgptauth",
+      "artifactId": "chatgpt-auth",
       "version": "0.1.0",
       "repository": "local-maven-repo"
     }
