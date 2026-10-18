@@ -46,24 +46,18 @@ export default function HomeScreen() {
           </Pressable>
         </Link>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Gemini</Text>
-        <Text style={styles.status}>{geminiConnected ? 'Conectado neste dispositivo' : 'Ainda não conectado'}</Text>
-        <Link href="/connect-gemini" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{geminiConnected ? 'Gerenciar Gemini' : 'Conectar Gemini'}</Text></Pressable></Link>
-      </View>
       <Card title="DeepSeek" connected={deepSeekConnected} route="/connect-deepseek" />
-      <Card title="Claude API" connected={claudeConnected} route="/connect-claude" />
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Claude Pro / Max</Text>
-        <Text style={styles.muted}>Configure sua assinatura para tarefas no GitHub Actions com o guia seguro.</Text>
-        <Link href="/claude-guide" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>Abrir tutorial Claude</Text></Pressable></Link>
+        <Text style={styles.cardTitle}>Claude</Text><Text style={styles.status}>{claudeConnected ? 'API conectada neste dispositivo' : 'Assinatura ou API'}</Text>
+        <Link href="/claude" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>Abrir Claude</Text></Pressable></Link>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>ChatGPT / Codex</Text>
         <Text style={styles.status}>{openAiConnected ? 'OpenAI API conectada neste dispositivo' : 'Assinatura requer runtime complementar'}</Text>
         <Text style={styles.muted}>Use API como alternativa direta. A assinatura ChatGPT/Codex não é uma chave de API móvel.</Text>
-        <Link href="/connect-openai" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{openAiConnected ? 'Gerenciar OpenAI' : 'Ver opções'}</Text></Pressable></Link>
+        <Link href="/openai" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{openAiConnected ? 'Gerenciar OpenAI' : 'Ver opções'}</Text></Pressable></Link>
       </View>
+      <View style={styles.card}><Text style={styles.cardTitle}>Gemini</Text><Text style={styles.status}>{geminiConnected ? 'Conectado neste dispositivo' : 'Ainda não conectado'}</Text><Link href="/connect-gemini" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{geminiConnected ? 'Gerenciar Gemini' : 'Conectar Gemini'}</Text></Pressable></Link></View>
     </ScrollView>
   )
 }

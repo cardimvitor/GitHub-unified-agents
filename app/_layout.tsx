@@ -11,9 +11,12 @@ export default function RootLayout() {
         <Stack.Screen name="connect-gemini" options={{ title: 'Conectar Gemini' }} />
         <Stack.Screen name="connect-deepseek" options={{ title: 'Conectar DeepSeek' }} />
         <Stack.Screen name="connect-claude" options={{ title: 'Conectar Claude API' }} />
+        <Stack.Screen name="claude" options={{ title: 'Claude' }} />
         <Stack.Screen name="claude-guide" options={{ title: 'Claude por assinatura' }} />
         <Stack.Screen name="setup-claude-subscription" options={{ title: 'Configurar Claude no GitHub' }} />
         <Stack.Screen name="connect-openai" options={{ title: 'ChatGPT / Codex' }} />
+        <Stack.Screen name="openai" options={{ title: 'ChatGPT / Codex' }} />
+        <Stack.Screen name="codex-guide" options={{ title: 'Codex por assinatura' }} />
         <Stack.Screen name="chat" options={{ title: 'Planejamento compartilhado' }} />
       </Stack>
     </>
