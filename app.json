@@ -6,13 +6,21 @@
     "scheme": "unifiedagents",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
     "plugins": ["expo-router", "expo-secure-store"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cardimvitor.unifiedagents"
     },
     "android": {
-      "package": "com.cardimvitor.unifiedagents"
+      "package": "com.cardimvitor.unifiedagents",
+      "permissions": ["android.permission.INTERNET"],
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.VIBRATE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     }
   }
 }
