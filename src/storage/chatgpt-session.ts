@@ -2,7 +2,16 @@ import * as SecureStore from 'expo-secure-store'
 
 const KEY = 'chatgpt-plan-session'
 
-export type ChatGptPlanSession = { accessToken: string; refreshToken?: string; clientId: string; expiresAt?: number }
+export type ChatGptPlanSession = {
+  accessToken: string
+  refreshToken?: string
+  idToken: string
+  clientId: string
+  subject: string
+  email?: string | null
+  scopes: string[]
+  expiresAt?: number
+}
 
 export const chatGptSession = {
   async read() {

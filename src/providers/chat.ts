@@ -1,5 +1,6 @@
 import { providerCredentials, type ProviderId } from '@/storage/provider-credentials'
 import { chatGptSession } from '@/storage/chatgpt-session'
+import { accessTokenForChatGpt } from '@/openai/chatgpt-subscription'
 
 export type ChatProvider = Exclude<ProviderId, 'gemini'> | 'gemini'
 
@@ -19,7 +20,7 @@ async function responseJson(response: Response) {
 export async function askProvider(provider: ChatProvider, prompt: string) {
   if (provider === 'openai') {
     const subscription = await chatGptSession.read()
-    if (subscription) return askChatGptPlan(subscription.accessToken, prompt)
+    if (subscription) return askChatGptPlan(await accessTokenForChatGpt(subscription), prompt)
   }
   const key = await providerCredentials.read(provider)
   if (!key) throw new Error('Conecte este provider antes de enviar uma mensagem.')
@@ -95,7 +96,9 @@ async function askChatGptPlan(accessToken: string, prompt: string) {
     buffer = lines.pop() ?? ''
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue
-      const event = JSON.parse(line.slice(6)) as { type?: string; delta?: string }
+      const payload = line.slice(6).trim()
+      if (!payload || payload === '[DONE]') continue
+      const event = JSON.parse(payload) as { type?: string; delta?: string }
       if (event.type === 'response.output_text.delta') text += event.delta ?? ''
     }
   }
