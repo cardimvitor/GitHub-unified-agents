@@ -2,6 +2,9 @@
 
 Aplicativo móvel, cloud-first, para controlar agentes de desenvolvimento pelo GitHub.
 
+Licença: [MIT](LICENSE). O projeto é open source; contribuições seguem o
+[guia de contribuição](CONTRIBUTING.md).
+
 ## Primeira versão
 
 - Login GitHub no próprio dispositivo, usando OAuth Device Flow.
@@ -19,6 +22,16 @@ Ele usa a assinatura Claude Pro/Max por meio do secret de Actions
 `CLAUDE_CODE_OAUTH_TOKEN`, nunca por uma chave da Anthropic no aplicativo.
 Gere o token com `claude setup-token`, faça o login oficial da Anthropic e
 adicione o valor em **Settings → Secrets and variables → Actions** do repositório.
+
+## ChatGPT / Codex por assinatura
+
+O chat por assinatura usa o fluxo oficial **Sign in with ChatGPT**: o usuário
+autoriza explicitamente o uso do próprio plano ChatGPT no app, sem revelar uma
+API key. A implementação Android precisa manter um callback OAuth local, PKCE,
+validação de identidade e renovação segura de tokens. GitHub não é necessário
+para conversar; ele só é usado quando uma tarefa deve criar branch, commit ou
+pull request. Essa etapa de runtime Codex/GitHub é separada e nunca recebe a
+senha ou a sessão do ChatGPT.
 
 ## Por que não copiar o Orca inteiro?
 
