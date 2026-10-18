@@ -9,6 +9,10 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ title: 'Unified Agents' }} />
         <Stack.Screen name="connect-github" options={{ title: 'Conectar GitHub' }} />
         <Stack.Screen name="connect-gemini" options={{ title: 'Conectar Gemini' }} />
+        <Stack.Screen name="connect-deepseek" options={{ title: 'Conectar DeepSeek' }} />
+        <Stack.Screen name="connect-claude" options={{ title: 'Conectar Claude API' }} />
+        <Stack.Screen name="connect-openai" options={{ title: 'ChatGPT / Codex' }} />
+        <Stack.Screen name="chat" options={{ title: 'Planejamento compartilhado' }} />
       </Stack>
     </>
   )

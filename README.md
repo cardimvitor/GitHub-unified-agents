@@ -7,9 +7,10 @@ Aplicativo móvel, cloud-first, para controlar agentes de desenvolvimento pelo G
 - Login GitHub no próprio dispositivo, usando OAuth Device Flow.
 - Fallback opcional por fine-grained PAT, validado antes de ser salvo no cofre do aparelho.
 - Token armazenado em `expo-secure-store`, nunca no repositório.
-- Conexão Gemini por chave individual, validada e armazenada no cofre do aparelho.
+- Conexões Gemini, DeepSeek, Claude API e OpenAI API por chaves individuais, validadas e armazenadas no cofre do aparelho.
+- Chat de planejamento local: o mesmo histórico pode ser reenviado a qualquer provider conectado para comparar respostas.
 - Base para criar Issues, observar PRs e configurar GitHub Actions.
-- Integrações previstas: Claude Code via OAuth da assinatura, Codex via Sign in with ChatGPT e DeepSeek como secret do GitHub.
+- GitHub permanece separado dos providers: nada é publicado no repositório sem uma ação explícita posterior.
 
 ## Por que não copiar o Orca inteiro?
 
@@ -32,7 +33,8 @@ autorizar a sua própria conta GitHub pelo fluxo de dispositivo.
 
 - Use OAuth/App do GitHub com acesso somente ao repositório escolhido.
 - Prefira OAuth; se usar PAT, crie um fine-grained PAT limitado ao repositório e revogue-o ao deixar de usá-lo.
-- A chave Gemini não é enviada ao GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
+- As chaves Gemini, DeepSeek, Anthropic e OpenAI não são enviadas ao GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
 - Tokens de Claude/Codex/DeepSeek nunca entram em Issues, commits ou logs.
+- Assinaturas Claude Pro/Max e ChatGPT/Codex não são chaves de API. Claude Code e Codex por assinatura exigem os fluxos oficiais e um runtime complementar; o app não disfarça uma chave de API como assinatura.
 - Para Actions, o app deve criptografar cada secret com a chave pública do repositório antes de enviá-lo à API do GitHub.
 - Fluxos que alterem código devem abrir PRs; a aprovação e merge permanecem humanos.
