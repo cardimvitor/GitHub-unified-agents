@@ -25,13 +25,29 @@ adicione o valor em **Settings → Secrets and variables → Actions** do reposi
 
 ## ChatGPT / Codex por assinatura
 
-O chat por assinatura usa o fluxo oficial **Sign in with ChatGPT**: o usuário
-autoriza explicitamente o uso do próprio plano ChatGPT no app, sem revelar uma
-API key. A implementação Android precisa manter um callback OAuth local, PKCE,
-validação de identidade e renovação segura de tokens. GitHub não é necessário
-para conversar; ele só é usado quando uma tarefa deve criar branch, commit ou
-pull request. Essa etapa de runtime Codex/GitHub é separada e nunca recebe a
-senha ou a sessão do ChatGPT.
+O botão **Usar assinatura ChatGPT / Codex** abre o navegador do sistema e usa o
+fluxo oficial **Sign in with ChatGPT**. Ele não pede API key e não recebe a
+senha do usuário. No Android, o app:
+
+- cria um callback local em `127.0.0.1`, PKCE, `state` e `nonce` novos;
+- mantém um identificador de host por instalação e registra/reutiliza o client
+  emitido pelo OpenAI;
+- verifica no módulo nativo a assinatura RSA, emissor, audiência, expiração e
+  `nonce` do ID token contra as chaves públicas do OpenAI;
+- só ativa o chat quando o usuário conceder o escopo
+  `chatgpt.tokens.use.direct`;
+- guarda tokens e metadados no cofre do aparelho e renova o token rotativo
+  antes de expirar.
+
+No chat compartilhado, escolher **OpenAI API** usa primeiro a sessão ChatGPT
+conectada; se ela não existir, usa a API key OpenAI opcional. A assinatura dá
+acesso somente a requisições elegíveis de `Responses API`: não dá acesso às
+conversas existentes do ChatGPT, nem à API key do usuário.
+
+GitHub não é necessário para conversar. GitHub é usado separadamente quando o
+usuário decidir abrir Issue, branch, commit ou pull request. Já uma automação
+Codex que edite o repositório exige um runtime Codex autorizado no ambiente que
+executará a tarefa; ela não recebe a senha nem a sessão do ChatGPT pelo GitHub.
 
 ## Por que não copiar o Orca inteiro?
 
