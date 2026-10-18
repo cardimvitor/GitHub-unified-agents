@@ -7,9 +7,13 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "newArchEnabled": false,
+    "splash": {
+      "backgroundColor": "#101827"
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-system-ui",
       "expo-web-browser"
     ],
     "ios": {
