@@ -1,6 +1,11 @@
 {
   "platforms": ["android"],
   "android": {
-    "modules": ["expo.modules.chatgptauth.ChatGptAuthModule"]
+    "modules": ["expo.modules.chatgptauth.ChatGptAuthModule"],
+    "publication": {
+      "groupId": "expo.modules.chatgptauth",
+      "artifactId": "expo.modules.chatgptauth",
+      "repository": "local-maven-repo"
+    }
   }
 }
