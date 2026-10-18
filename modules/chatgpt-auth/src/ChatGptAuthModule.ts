@@ -1,11 +1,9 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
-import { ChatGptAuthModuleEvents, VerifiedIdentity } from './ChatGptAuth.types';
+import { VerifiedIdentity } from './ChatGptAuth.types';
 
-declare class ChatGptAuthModule extends NativeModule<ChatGptAuthModuleEvents> {
-  startCallbackListener(): Promise<{ redirectUri: string }>;
-  stopCallbackListener(): Promise<void>;
-  verifyIdentity(idToken: string, clientId: string, nonce: string): Promise<VerifiedIdentity>;
+declare class ChatGptAuthModule extends NativeModule {
+  verifyIdentity(idToken: string, clientId: string, nonce: string | null): Promise<VerifiedIdentity>;
 }
 
 export default requireNativeModule<ChatGptAuthModule>('ChatGptAuth');

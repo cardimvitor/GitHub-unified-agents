@@ -38,7 +38,7 @@ export default function HomeScreen() {
       <Text style={styles.eyebrow}>MOBILE CONTROL CENTER</Text>
       <Text style={styles.title}>GitHub Unified Agents</Text>
       <Text style={styles.copy}>
-        Conecte seu GitHub para criar tarefas, acompanhar pull requests e instalar automações de agentes.
+        Conecte seus provedores de IA e converse com eles no planejamento compartilhado. A integração com Issues e pull requests ainda está em construção.
       </Text>
       <Link href="/chat" asChild><Pressable style={styles.chatButton}><Text style={styles.buttonText}>Abrir planejamento compartilhado</Text></Pressable></Link>
       <View style={styles.card}>

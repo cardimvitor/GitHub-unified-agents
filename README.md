@@ -25,24 +25,29 @@ adicione o valor em **Settings → Secrets and variables → Actions** do reposi
 
 ## ChatGPT / Codex por assinatura
 
-O botão **Usar assinatura ChatGPT / Codex** abre o navegador do sistema e usa o
-fluxo oficial **Sign in with ChatGPT**. Ele não pede API key e não recebe a
-senha do usuário. No Android, o app:
+O botão **Usar assinatura ChatGPT** usa o código de dispositivo oficial da
+OpenAI, o mesmo fluxo do Codex CLI (`auth.openai.com/codex/device`). O app
+abre o navegador, você confirma o código e o app detecta a autorização. Não há
+senha no app e nenhum servidor local é aberto no aparelho. O app:
 
-- cria um callback local em `127.0.0.1`, PKCE, `state` e `nonce` novos;
-- mantém um identificador de host por instalação e registra/reutiliza o client
-  emitido pelo OpenAI;
-- verifica no módulo nativo a assinatura RSA, emissor, audiência, expiração e
-  `nonce` do ID token contra as chaves públicas do OpenAI;
-- só ativa o chat quando o usuário conceder o escopo
-  `chatgpt.tokens.use.direct`;
+- usa o client público do Codex CLI (`app_EMoamEEZ73f0CkXaXp7hrann`);
+- verifica no módulo nativo a assinatura RSA, emissor, audiência e validade do
+  ID token contra as chaves públicas da OpenAI, e lê o `chatgpt_account_id`;
 - guarda tokens e metadados no cofre do aparelho e renova o token rotativo
-  antes de expirar.
+  antes de expirar;
+- revoga o refresh token em `auth.openai.com/oauth/revoke` ao desconectar.
 
-No chat compartilhado, escolher **OpenAI API** usa primeiro a sessão ChatGPT
-conectada; se ela não existir, usa a API key OpenAI opcional. A assinatura dá
-acesso somente a requisições elegíveis de `Responses API`: não dá acesso às
-conversas existentes do ChatGPT, nem à API key do usuário.
+No chat compartilhado, escolher **ChatGPT / OpenAI** usa primeiro a sessão
+ChatGPT conectada, com as requisições enviadas a `chatgpt.com/backend-api/codex`;
+se ela não existir, usa a API key OpenAI opcional.
+
+## Modelos
+
+Nenhum nome de modelo fica fixo no código. Para cada provider, o app lista os
+modelos disponíveis na própria API e usa o mais recente de texto (Gemini por
+versão e estabilidade, OpenAI e Claude pela data de criação, DeepSeek pela
+versão no nome e ChatGPT pela versão do slug). A lista é guardada por uma hora.
+O nome do modelo usado aparece em cada resposta do chat.
 
 GitHub não é necessário para conversar. GitHub é usado separadamente quando o
 usuário decidir abrir Issue, branch, commit ou pull request. Já uma automação
