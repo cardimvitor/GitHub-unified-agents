@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Unified Agents",
+    "slug": "github-unified-agents",
+    "version": "0.1.0",
+    "scheme": "unifiedagents",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "plugins": ["expo-router", "expo-secure-store"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cardimvitor.unifiedagents"
+    },
+    "android": {
+      "package": "com.cardimvitor.unifiedagents"
+    }
+  }
+}

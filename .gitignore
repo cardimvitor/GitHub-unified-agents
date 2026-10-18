@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+*.jks
+*.p8
+*.mobileprovision
+.env
+.env.*
+!.env.example
+
