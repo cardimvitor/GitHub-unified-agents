@@ -12,6 +12,14 @@ Aplicativo móvel, cloud-first, para controlar agentes de desenvolvimento pelo G
 - Base para criar Issues, observar PRs e configurar GitHub Actions.
 - GitHub permanece separado dos providers: nada é publicado no repositório sem uma ação explícita posterior.
 
+## Claude Code por assinatura
+
+O workflow `Claude Code` responde a Issues ou comentários que contenham `@claude`.
+Ele usa a assinatura Claude Pro/Max por meio do secret de Actions
+`CLAUDE_CODE_OAUTH_TOKEN`, nunca por uma chave da Anthropic no aplicativo.
+Gere o token com `claude setup-token`, faça o login oficial da Anthropic e
+adicione o valor em **Settings → Secrets and variables → Actions** do repositório.
+
 ## Por que não copiar o Orca inteiro?
 
 Orca é um IDE Electron com pareamento entre desktop e telefone. Este projeto usa apenas a direção mobile do Orca — Expo, TypeScript, Expo Router e armazenamento seguro — e começa sem dependência de desktop: GitHub Actions executa o trabalho na cloud.
