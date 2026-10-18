@@ -51,7 +51,13 @@ class ChatGptAuthModule : Module() {
         val error = uri.getQueryParameter("error")
         val body = if (error == null) "Authorization received. Return to the app." else "Authorization cancelled."
         socket.getOutputStream().bufferedWriter().use { writer -> writer.write("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${body.toByteArray().size}\r\nConnection: close\r\n\r\n$body"); writer.flush() }
-        if (error != null || code == null || state == null || clientId == null) sendEvent("onOAuthError", mapOf("error" to (error ?: "Incomplete OAuth response"))) else sendEvent("onOAuthCallback", mapOf("code" to code, "state" to state, "clientId" to clientId))
+        if (error != null || code == null || state == null) {
+          sendEvent("onOAuthError", mapOf("error" to (error ?: "Incomplete OAuth response")))
+        } else {
+          val payload = mutableMapOf("code" to code, "state" to state)
+          if (clientId != null) payload["clientId"] = clientId
+          sendEvent("onOAuthCallback", payload)
+        }
       }
     } catch (error: Exception) { if (!server.isClosed) sendEvent("onOAuthError", mapOf("error" to (error.message ?: "OAuth callback failed"))) }
     finally { if (callbackServer == server) callbackServer = null }

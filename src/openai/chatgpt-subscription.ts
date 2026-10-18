@@ -9,7 +9,7 @@ const RESOURCE = 'https://api.openai.com/v1'
 const HOST_ID_KEY = 'chatgpt-plan-host-id'
 const PLAN_SCOPE = 'chatgpt.tokens.use.direct'
 
-export type PendingChatGptLogin = { state: string; nonce: string; verifier: string; redirectUri: string }
+export type PendingChatGptLogin = { state: string; nonce: string; verifier: string; redirectUri: string; clientId?: string }
 
 type TokenResponse = {
   access_token?: string
@@ -65,18 +65,38 @@ export async function beginChatGptLogin() {
     ext_agent_host_id: hostId,
     agent_name_hint: 'GitHub Unified Agents'
   })
-  return { url: `${AUTH_URL}?${params.toString()}`, pending: { state, nonce, verifier, redirectUri } satisfies PendingChatGptLogin }
+  return { url: `${AUTH_URL}?${params.toString()}`, pending: { state, nonce, verifier, redirectUri, clientId: previous?.clientId } satisfies PendingChatGptLogin }
 }
 
-export async function finishChatGptLogin(callback: { code: string; state: string; clientId: string }, pending: PendingChatGptLogin) {
+export async function finishChatGptLogin(callback: { code: string; state: string; clientId?: string }, pending: PendingChatGptLogin) {
   if (callback.state !== pending.state) throw new Error('A resposta de login não corresponde a esta solicitação.')
-  const response = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', client_id: callback.clientId, code: callback.code, code_verifier: pending.verifier, redirect_uri: pending.redirectUri, resource: RESOURCE }).toString() })
+  const clientId = callback.clientId ?? pending.clientId
+  if (!clientId) throw new Error('O ChatGPT não retornou o client ID da autorização.')
+  const response = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', client_id: clientId, code: callback.code, code_verifier: pending.verifier, redirect_uri: pending.redirectUri, resource: RESOURCE }).toString() })
   const data = await response.json() as TokenResponse
   if (!response.ok || !data.access_token || !data.id_token) throw new Error(data.error_description || 'ChatGPT não aceitou a autorização.')
   const scopes = normalizeScopes(data.scope)
   if (!scopes.includes(PLAN_SCOPE)) throw new Error('A conta entrou, mas não autorizou o uso da assinatura para o chat.')
-  const identity = await ChatGptAuth.verifyIdentity(data.id_token, callback.clientId, pending.nonce)
-  await chatGptSession.save({ accessToken: data.access_token, refreshToken: data.refresh_token, idToken: data.id_token, clientId: callback.clientId, subject: identity.subject, email: identity.email, scopes, expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined })
+  const identity = await ChatGptAuth.verifyIdentity(data.id_token, clientId, pending.nonce)
+  await chatGptSession.save({ accessToken: data.access_token, refreshToken: data.refresh_token, idToken: data.id_token, clientId, subject: identity.subject, email: identity.email, scopes, expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined })
+}
+
+export async function disconnectChatGpt() {
+  const session = await chatGptSession.read()
+  let revoked = false
+  try {
+    if (session?.refreshToken) {
+      const configuration = await fetch('https://auth.openai.com/.well-known/openid-configuration')
+      const data = await configuration.json() as { revocation_endpoint?: string }
+      if (configuration.ok && data.revocation_endpoint) {
+        const response = await fetch(data.revocation_endpoint, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ token: session.refreshToken, token_type_hint: 'refresh_token', client_id: session.clientId }).toString() })
+        revoked = response.ok
+      }
+    }
+  } finally {
+    await chatGptSession.clear()
+  }
+  return revoked
 }
 
 export async function accessTokenForChatGpt(session: ChatGptPlanSession) {
