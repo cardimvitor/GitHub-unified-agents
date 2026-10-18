@@ -2,10 +2,13 @@ import * as Linking from 'expo-linking'
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { beginGitHubDeviceAuthorization, pollGitHubAccessToken } from '@/github/device-auth'
+import { getAuthenticatedGitHubUser } from '@/github/repository'
 import { githubSession } from '@/storage/github-session'
 
 export default function ConnectGitHubScreen() {
   const [code, setCode] = useState<string>()
+  const [mode, setMode] = useState<'oauth' | 'pat'>('oauth')
+  const [pat, setPat] = useState('')
   const [message, setMessage] = useState('O login usa o fluxo seguro de dispositivo do GitHub.')
   const [busy, setBusy] = useState(false)
 
@@ -36,15 +39,50 @@ export default function ConnectGitHubScreen() {
     }
   }
 
+  async function connectPat() {
+    const candidate = pat.trim()
+    if (!candidate) {
+      setMessage('Cole um fine-grained PAT para continuar.')
+      return
+    }
+    setBusy(true)
+    try {
+      const user = await getAuthenticatedGitHubUser(candidate)
+      await githubSession.save(candidate)
+      setPat('')
+      setMessage(`GitHub conectado como ${user.login}. O PAT foi guardado somente no cofre do dispositivo.`)
+    } catch {
+      setMessage('O PAT foi recusado. Use um fine-grained PAT com acesso ao repositório escolhido.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <View style={styles.page}>
       <Text style={styles.title}>Autorizar GitHub</Text>
       <Text style={styles.copy}>{message}</Text>
-      {code ? <TextInput editable={false} value={code} style={styles.code} /> : null}
-      <Pressable disabled={busy} onPress={() => void connect()} style={[styles.button, busy && styles.disabled]}>
-        {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Continuar com GitHub</Text>}
-      </Pressable>
-      <Text style={styles.note}>Você só precisa autorizar sua própria conta. Nenhum token é versionado neste repositório.</Text>
+      <View style={styles.modeRow}>
+        <Pressable onPress={() => setMode('oauth')} style={[styles.mode, mode === 'oauth' && styles.modeActive]}><Text style={styles.modeText}>Login GitHub</Text></Pressable>
+        <Pressable onPress={() => setMode('pat')} style={[styles.mode, mode === 'pat' && styles.modeActive]}><Text style={styles.modeText}>Usar PAT</Text></Pressable>
+      </View>
+      {mode === 'oauth' ? (
+        <>
+          {code ? <TextInput editable={false} value={code} style={styles.code} /> : null}
+          <Pressable disabled={busy} onPress={() => void connect()} style={[styles.button, busy && styles.disabled]}>
+            {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Continuar com GitHub</Text>}
+          </Pressable>
+          <Text style={styles.note}>Você só precisa autorizar sua própria conta. Nenhum token é versionado neste repositório.</Text>
+        </>
+      ) : (
+        <>
+          <TextInput value={pat} onChangeText={setPat} autoCapitalize="none" autoCorrect={false} secureTextEntry placeholder="github_pat_…" placeholderTextColor="#64748b" style={styles.input} />
+          <Pressable disabled={busy} onPress={() => void connectPat()} style={[styles.button, busy && styles.disabled]}>
+            {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Validar e guardar PAT</Text>}
+          </Pressable>
+          <Text style={styles.note}>Use apenas fine-grained PAT, limitado ao repositório desejado. Este é um fallback; prefira Login GitHub.</Text>
+        </>
+      )}
     </View>
   )
 }
@@ -54,6 +92,11 @@ const styles = StyleSheet.create({
   title: { color: '#f8fafc', fontSize: 28, fontWeight: '700' },
   copy: { color: '#cbd5e1', fontSize: 16, lineHeight: 24 },
   code: { color: '#f8fafc', backgroundColor: '#1e293b', borderRadius: 12, fontSize: 28, fontWeight: '700', letterSpacing: 4, padding: 16, textAlign: 'center' },
+  input: { color: '#f8fafc', backgroundColor: '#1e293b', borderRadius: 10, fontSize: 16, padding: 14 },
+  modeRow: { flexDirection: 'row', gap: 10 },
+  mode: { borderColor: '#475569', borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10 },
+  modeActive: { backgroundColor: '#1d4ed8', borderColor: '#60a5fa' },
+  modeText: { color: '#f8fafc', fontWeight: '600' },
   button: { alignItems: 'center', backgroundColor: '#2563eb', borderRadius: 10, minHeight: 48, justifyContent: 'center', padding: 12 },
   disabled: { opacity: 0.65 },
   buttonText: { color: '#ffffff', fontWeight: '700' },

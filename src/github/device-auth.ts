@@ -14,6 +14,12 @@ type TokenResponse = {
   error?: 'authorization_pending' | 'slow_down' | 'expired_token' | 'access_denied'
 }
 
+async function githubError(response: Response, fallback: string): Promise<Error> {
+  const payload = await response.json().catch(() => null) as { error?: string; error_description?: string } | null
+  const detail = payload?.error_description ?? payload?.error
+  return new Error(detail ? `${fallback} (${detail}).` : `${fallback} (${response.status}).`)
+}
+
 function clientId(): string {
   const value = process.env.EXPO_PUBLIC_GITHUB_CLIENT_ID
   if (!value) throw new Error('A configuração segura da versão não inclui o login GitHub. Contate o administrador do aplicativo.')
@@ -23,10 +29,10 @@ function clientId(): string {
 export async function beginGitHubDeviceAuthorization(): Promise<DeviceAuthorization> {
   const response = await fetch(DEVICE_CODE_URL, {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ client_id: clientId(), scope: 'repo workflow' }).toString()
   })
-  if (!response.ok) throw new Error('Não foi possível iniciar o login no GitHub.')
+  if (!response.ok) throw await githubError(response, 'Não foi possível iniciar o login no GitHub')
   const payload = await response.json()
   return {
     deviceCode: payload.device_code,
@@ -40,14 +46,14 @@ export async function beginGitHubDeviceAuthorization(): Promise<DeviceAuthorizat
 export async function pollGitHubAccessToken(deviceCode: string): Promise<string | null> {
   const response = await fetch(ACCESS_TOKEN_URL, {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       client_id: clientId(),
       device_code: deviceCode,
       grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
     }).toString()
   })
-  if (!response.ok) throw new Error('Falha ao verificar o login no GitHub.')
+  if (!response.ok) throw await githubError(response, 'Falha ao verificar o login no GitHub')
   const payload = (await response.json()) as TokenResponse
   if (payload.access_token) return payload.access_token
   if (payload.error === 'authorization_pending' || payload.error === 'slow_down') return null

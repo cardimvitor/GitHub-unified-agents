@@ -4,6 +4,10 @@ export type GitHubRepository = {
   defaultBranch: string
 }
 
+export type GitHubUser = {
+  login: string
+}
+
 async function request<T>(token: string, path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`https://api.github.com${path}`, {
     ...init,
@@ -16,6 +20,11 @@ async function request<T>(token: string, path: string, init?: RequestInit): Prom
   })
   if (!response.ok) throw new Error(`GitHub respondeu com ${response.status}.`)
   return response.json() as Promise<T>
+}
+
+export async function getAuthenticatedGitHubUser(token: string): Promise<GitHubUser> {
+  const user = await request<{ login: string }>(token, '/user')
+  return { login: user.login }
 }
 
 export async function getRepository(token: string, owner: string, name: string): Promise<GitHubRepository> {

@@ -2,13 +2,18 @@ import { Link, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { githubSession } from '@/storage/github-session'
+import { providerCredentials } from '@/storage/provider-credentials'
 
 export default function HomeScreen() {
   const [connected, setConnected] = useState(false)
+  const [geminiConnected, setGeminiConnected] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
-      void githubSession.read().then((token) => setConnected(Boolean(token)))
+      void Promise.all([githubSession.read(), providerCredentials.read('gemini')]).then(([token, gemini]) => {
+        setConnected(Boolean(token))
+        setGeminiConnected(Boolean(gemini))
+      })
     }, [])
   )
 
@@ -29,8 +34,13 @@ export default function HomeScreen() {
         </Link>
       </View>
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Próximas conexões</Text>
-        <Text style={styles.muted}>Claude Code via OAuth da assinatura, Codex via Sign in with ChatGPT e DeepSeek via secret do GitHub.</Text>
+        <Text style={styles.cardTitle}>Gemini</Text>
+        <Text style={styles.status}>{geminiConnected ? 'Conectado neste dispositivo' : 'Ainda não conectado'}</Text>
+        <Link href="/connect-gemini" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{geminiConnected ? 'Gerenciar Gemini' : 'Conectar Gemini'}</Text></Pressable></Link>
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Outros providers</Text>
+        <Text style={styles.muted}>ChatGPT/Codex, Claude e DeepSeek entrarão neste mesmo painel. Cada provider mantém a própria autorização e nunca compartilha credenciais com o GitHub.</Text>
       </View>
     </View>
   )
