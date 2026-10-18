@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { githubSession } from '@/storage/github-session'
 import { providerCredentials } from '@/storage/provider-credentials'
+import { chatGptSession } from '@/storage/chatgpt-session'
 
 export default function HomeScreen() {
   const [connected, setConnected] = useState(false)
@@ -10,6 +11,7 @@ export default function HomeScreen() {
   const [deepSeekConnected, setDeepSeekConnected] = useState(false)
   const [claudeConnected, setClaudeConnected] = useState(false)
   const [openAiConnected, setOpenAiConnected] = useState(false)
+  const [chatGptConnected, setChatGptConnected] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -18,13 +20,15 @@ export default function HomeScreen() {
         providerCredentials.read('gemini'),
         providerCredentials.read('deepseek'),
         providerCredentials.read('claude'),
-        providerCredentials.read('openai')
-      ]).then(([token, gemini, deepseek, claude, openai]) => {
+        providerCredentials.read('openai'),
+        chatGptSession.read()
+      ]).then(([token, gemini, deepseek, claude, openai, chatgpt]) => {
         setConnected(Boolean(token))
         setGeminiConnected(Boolean(gemini))
         setDeepSeekConnected(Boolean(deepseek))
         setClaudeConnected(Boolean(claude))
         setOpenAiConnected(Boolean(openai))
+        setChatGptConnected(Boolean(chatgpt))
       })
     }, [])
   )
@@ -53,9 +57,9 @@ export default function HomeScreen() {
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>ChatGPT / Codex</Text>
-        <Text style={styles.status}>{openAiConnected ? 'OpenAI API conectada neste dispositivo' : 'Assinatura requer runtime complementar'}</Text>
-        <Text style={styles.muted}>Use API como alternativa direta. A assinatura ChatGPT/Codex não é uma chave de API móvel.</Text>
-        <Link href="/openai" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{openAiConnected ? 'Gerenciar OpenAI' : 'Ver opções'}</Text></Pressable></Link>
+        <Text style={styles.status}>{chatGptConnected ? 'Assinatura ChatGPT conectada neste dispositivo' : openAiConnected ? 'OpenAI API conectada neste dispositivo' : 'Ainda não conectado'}</Text>
+        <Text style={styles.muted}>A assinatura é usada no chat; a API key é uma alternativa. Automação de repositório permanece separada no GitHub.</Text>
+        <Link href="/openai" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{chatGptConnected || openAiConnected ? 'Gerenciar ChatGPT / OpenAI' : 'Ver opções'}</Text></Pressable></Link>
       </View>
       <View style={styles.card}><Text style={styles.cardTitle}>Gemini</Text><Text style={styles.status}>{geminiConnected ? 'Conectado neste dispositivo' : 'Ainda não conectado'}</Text><Link href="/connect-gemini" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{geminiConnected ? 'Gerenciar Gemini' : 'Conectar Gemini'}</Text></Pressable></Link></View>
     </ScrollView>

@@ -8,7 +8,7 @@ const providers: Array<{ id: ChatProvider; label: string }> = [
   { id: 'gemini', label: 'Gemini' },
   { id: 'deepseek', label: 'DeepSeek' },
   { id: 'claude', label: 'Claude API' },
-  { id: 'openai', label: 'OpenAI API' }
+  { id: 'openai', label: 'ChatGPT / OpenAI' }
 ]
 
 export default function SharedChatScreen() {
