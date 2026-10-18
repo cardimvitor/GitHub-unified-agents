@@ -11,7 +11,6 @@ export default function SharedChatScreen() {
   const [connected, setConnected] = useState<Connected[]>([])
   const [target, setTarget] = useState<ChatTarget | null>(null)
   const [modelState, setModelState] = useState<ModelState | null>(null)
-  const [modelsOpen, setModelsOpen] = useState(false)
   const [modelsError, setModelsError] = useState<string>()
   const [prompt, setPrompt] = useState('')
   const [entries, setEntries] = useState<Entry[]>([])
@@ -27,7 +26,6 @@ export default function SharedChatScreen() {
   useEffect(() => {
     setModelState(null)
     setModelsError(undefined)
-    setModelsOpen(false)
     if (!target) return
     let active = true
     modelsFor(target)
@@ -42,7 +40,6 @@ export default function SharedChatScreen() {
     if (!target) return
     await setModelFor(target, model)
     setModelState(await modelsFor(target))
-    setModelsOpen(false)
   }
 
   async function send() {
@@ -77,19 +74,13 @@ export default function SharedChatScreen() {
       </Pressable>)}
     </View>
 
-    <Pressable onPress={() => setModelsOpen((open) => !open)} disabled={!modelState} style={styles.modelRow}>
-      <Text style={styles.modelLabel}>Modelo</Text>
-      <Text numberOfLines={1} style={styles.modelValue}>
-        {modelsError ? modelsError : modelState ? `${modelState.active}${modelState.selected ? '' : ' (mais recente)'}` : 'Carregando…'}
-      </Text>
-      <Text style={styles.modelCaret}>{modelsOpen ? '▲' : '▼'}</Text>
-    </Pressable>
-    {modelsOpen && modelState ? <ScrollView style={styles.modelList} nestedScrollEnabled>
-      <Pressable onPress={() => void chooseModel(null)} style={styles.modelItem}>
-        <Text style={[styles.modelItemText, !modelState.selected && styles.modelItemSelected]}>Automático (mais recente)</Text>
+    <Text style={styles.modelHint}>{modelsError ?? (modelState ? 'Modelos disponíveis. Toque para usar na próxima mensagem.' : 'Carregando modelos…')}</Text>
+    {modelState ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modelRow}>
+      <Pressable onPress={() => void chooseModel(null)} style={[styles.modelChip, !modelState.selected && styles.chipSelected]}>
+        <Text style={[styles.chipText, !modelState.selected && styles.chipTextSelected]}>Automático</Text>
       </Pressable>
-      {modelState.models.map((model) => <Pressable key={model} onPress={() => void chooseModel(model)} style={styles.modelItem}>
-        <Text style={[styles.modelItemText, modelState.selected === model && styles.modelItemSelected]}>{model}</Text>
+      {modelState.models.map((model) => <Pressable key={model} onPress={() => void chooseModel(model)} style={[styles.modelChip, modelState.selected === model && styles.chipSelected]}>
+        <Text style={[styles.chipText, modelState.selected === model && styles.chipTextSelected]}>{model}</Text>
       </Pressable>)}
     </ScrollView> : null}
 
@@ -116,14 +107,9 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
   chipText: { color: '#e2e8f0', fontSize: 12, fontWeight: '600' },
   chipTextSelected: { color: '#fff' },
-  modelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#1e293b', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
-  modelLabel: { color: '#94a3b8', fontSize: 12 },
-  modelValue: { flex: 1, color: '#e2e8f0', fontSize: 13 },
-  modelCaret: { color: '#94a3b8', fontSize: 11 },
-  modelList: { maxHeight: 180, backgroundColor: '#0f172a', borderRadius: 8 },
-  modelItem: { paddingHorizontal: 12, paddingVertical: 9 },
-  modelItemText: { color: '#cbd5e1', fontSize: 13 },
-  modelItemSelected: { color: '#60a5fa', fontWeight: '700' },
+  modelHint: { color: '#94a3b8', fontSize: 12 },
+  modelRow: { flexDirection: 'row', gap: 6 },
+  modelChip: { borderRadius: 14, borderWidth: 1, borderColor: '#475569', paddingHorizontal: 10, paddingVertical: 5 },
   messages: { flex: 1, backgroundColor: '#0f172a', borderRadius: 10 },
   messagesContent: { padding: 10, gap: 8 },
   empty: { color: '#94a3b8', lineHeight: 20, fontSize: 14 },
