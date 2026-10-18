@@ -1,6 +1,7 @@
 import { useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { askProvider, connectedTargets, modelsFor, setModelFor, type ChatTarget } from '@/providers/chat'
 
 type Entry = { author: string; text: string }
@@ -15,6 +16,7 @@ export default function SharedChatScreen() {
   const [prompt, setPrompt] = useState('')
   const [entries, setEntries] = useState<Entry[]>([])
   const [busy, setBusy] = useState(false)
+  const insets = useSafeAreaInsets()
 
   useFocusEffect(useCallback(() => {
     void connectedTargets().then((list) => {
@@ -67,7 +69,7 @@ export default function SharedChatScreen() {
     </View>
   }
 
-  return <View style={styles.page}>
+  return <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <View style={styles.providers}>
       {connected.map((item) => <Pressable key={item.id} onPress={() => setTarget(item.id)} style={[styles.chip, target === item.id && styles.chipSelected]}>
         <Text style={[styles.chipText, target === item.id && styles.chipTextSelected]}>{item.label}</Text>
@@ -75,7 +77,7 @@ export default function SharedChatScreen() {
     </View>
 
     <Text style={styles.modelHint}>{modelsError ?? (modelState ? 'Modelos disponíveis. Toque para usar na próxima mensagem.' : 'Carregando modelos…')}</Text>
-    {modelState ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modelRow}>
+    {modelState ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modelScroll} contentContainerStyle={styles.modelRow}>
       <Pressable onPress={() => void chooseModel(null)} style={[styles.modelChip, !modelState.selected && styles.chipSelected]}>
         <Text style={[styles.chipText, !modelState.selected && styles.chipTextSelected]}>Automático</Text>
       </Pressable>
@@ -91,13 +93,13 @@ export default function SharedChatScreen() {
       </View>)}
     </ScrollView>
 
-    <View style={styles.composer}>
+    <View style={[styles.composer, { paddingBottom: insets.bottom + 4 }]}>
       <TextInput value={prompt} onChangeText={setPrompt} multiline placeholder="Mensagem" placeholderTextColor="#64748b" style={styles.input} />
       <Pressable onPress={() => void send()} disabled={busy || !target} style={[styles.send, (busy || !target) && styles.disabled]}>
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendText}>Enviar</Text>}
       </Pressable>
     </View>
-  </View>
+  </KeyboardAvoidingView>
 }
 
 const styles = StyleSheet.create({
@@ -108,7 +110,8 @@ const styles = StyleSheet.create({
   chipText: { color: '#e2e8f0', fontSize: 12, fontWeight: '600' },
   chipTextSelected: { color: '#fff' },
   modelHint: { color: '#94a3b8', fontSize: 12 },
-  modelRow: { flexDirection: 'row', gap: 6 },
+  modelScroll: { flexGrow: 0 },
+  modelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   modelChip: { borderRadius: 14, borderWidth: 1, borderColor: '#475569', paddingHorizontal: 10, paddingVertical: 5 },
   messages: { flex: 1, backgroundColor: '#0f172a', borderRadius: 10 },
   messagesContent: { padding: 10, gap: 8 },
