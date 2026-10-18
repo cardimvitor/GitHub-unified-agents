@@ -15,18 +15,16 @@ Orca é um IDE Electron com pareamento entre desktop e telefone. Este projeto us
 
 ## Rodar
 
-1. Crie um GitHub OAuth App e copie apenas o Client ID público para `.env`:
-
-   ```sh
-   cp .env.example .env
-   ```
-
-2. Instale e inicie:
+1. Instale e inicie:
 
    ```sh
    npm install
    npm run start
    ```
+
+Em produção, o Client ID público do OAuth é injetado pelo GitHub Actions Secret
+`EXPO_PUBLIC_GITHUB_CLIENT_ID`; ele não é versionado. Cada pessoa só precisa
+autorizar a sua própria conta GitHub pelo fluxo de dispositivo.
 
 ## Segurança
 

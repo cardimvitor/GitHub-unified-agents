@@ -16,7 +16,7 @@ type TokenResponse = {
 
 function clientId(): string {
   const value = process.env.EXPO_PUBLIC_GITHUB_CLIENT_ID
-  if (!value) throw new Error('Defina EXPO_PUBLIC_GITHUB_CLIENT_ID antes de conectar ao GitHub.')
+  if (!value) throw new Error('A configuração segura da versão não inclui o login GitHub. Contate o administrador do aplicativo.')
   return value
 }
 

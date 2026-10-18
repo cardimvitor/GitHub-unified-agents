@@ -44,7 +44,7 @@ export default function ConnectGitHubScreen() {
       <Pressable disabled={busy} onPress={() => void connect()} style={[styles.button, busy && styles.disabled]}>
         {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Continuar com GitHub</Text>}
       </Pressable>
-      <Text style={styles.note}>O cliente OAuth é configurado em EXPO_PUBLIC_GITHUB_CLIENT_ID. Nenhum token é versionado neste repositório.</Text>
+      <Text style={styles.note}>Você só precisa autorizar sua própria conta. Nenhum token é versionado neste repositório.</Text>
     </View>
   )
 }
