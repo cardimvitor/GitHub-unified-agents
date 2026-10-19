@@ -1,4 +1,5 @@
 import { AGENT_TEMPLATE } from '@/github/agent-template'
+import { githubSession } from '@/storage/github-session'
 
 const API = 'https://api.github.com'
 
@@ -16,6 +17,11 @@ async function api<T>(token: string, path: string, init?: RequestInit): Promise<
     }
   })
   if (response.status === 404) return null
+  if (response.status === 401) {
+    // Token expirado ou revogado: remove o login salvo para o app pedir a conexão de novo.
+    await githubSession.clear()
+    throw new Error('O GitHub recusou o login salvo (token expirado ou revogado). Conecte o GitHub de novo na tela inicial.')
+  }
   if (!response.ok) {
     const data = await response.json().catch(() => ({})) as { message?: string }
     throw new Error(data.message ? `GitHub recusou: ${data.message} (${response.status}).` : `GitHub respondeu com ${response.status}.`)
