@@ -7,6 +7,7 @@ import { createIssue } from '@/github/repository'
 import { askProvider, connectedTargets, modelsFor, setModelFor, type ChatTarget } from '@/providers/chat'
 import { githubSession } from '@/storage/github-session'
 import { githubTarget } from '@/storage/github-target'
+import { RepositoryPanel } from '@/components/repository-panel'
 
 type Entry = { author: string; text: string; plan?: boolean; created?: boolean }
 type Connected = { id: ChatTarget; label: string }
@@ -140,10 +141,7 @@ export default function SharedChatScreen() {
       </Pressable>)}
     </View> : null}
 
-    {planning ? <View style={styles.repoRow}>
-      <TextInput value={repository} onChangeText={(value) => { setRepository(value); void githubTarget.save(value.trim()) }} autoCapitalize="none" autoCorrect={false} placeholder="dono/repositorio" placeholderTextColor="#64748b" style={styles.repoInput} />
-      <Text style={styles.repoHint}>{!githubConnected ? 'GitHub não conectado' : validRepo ? 'Issue com @claude' : 'Informe dono/repositorio'}</Text>
-    </View> : null}
+    {planning ? <RepositoryPanel repository={repository} githubConnected={githubConnected} onChange={setRepository} /> : null}
 
     <Text style={styles.modelHint}>{modelsError ?? (modelState ? 'Modelos disponíveis. Toque para usar na próxima mensagem.' : 'Carregando modelos…')}</Text>
     {modelState ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modelScroll} contentContainerStyle={styles.modelRow}>
@@ -181,9 +179,6 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
   chipText: { color: '#e2e8f0', fontSize: 12, fontWeight: '600' },
   chipTextSelected: { color: '#fff' },
-  repoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  repoInput: { flex: 1, color: '#f8fafc', backgroundColor: '#1e293b', borderRadius: 8, fontSize: 13, paddingHorizontal: 10, paddingVertical: 6 },
-  repoHint: { color: '#94a3b8', fontSize: 11 },
   modelHint: { color: '#94a3b8', fontSize: 12 },
   modelScroll: { flexGrow: 0 },
   modelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
