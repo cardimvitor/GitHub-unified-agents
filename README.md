@@ -23,6 +23,22 @@ Ele usa a assinatura Claude Pro/Max por meio do secret de Actions
 Gere o token com `claude setup-token`, faça o login oficial da Anthropic e
 adicione o valor em **Settings → Secrets and variables → Actions** do repositório.
 
+## Agentes no GitHub Actions
+
+O planejamento acontece no app. A execução acontece no GitHub: o app cria uma
+Issue com a menção do agente escolhido, e o workflow executa e abre um PR em
+rascunho. Nenhum agente faz merge.
+
+| Agente | Menção | Workflow | Secret necessário |
+| --- | --- | --- | --- |
+| Claude Code | `@claude` | `claude-code.yml` | `CLAUDE_CODE_OAUTH_TOKEN` (assinatura Claude Pro/Max) |
+| Codex | `@codex` | `agents.yml` | `OPENAI_API_KEY` (API key; o login por assinatura não é usado em CI) |
+| DeepSeek | `@deepseek` | `agents.yml` | `DEEPSEEK_API_KEY` (usa aider com `deepseek/deepseek-v4-pro`) |
+
+Os secrets ficam em **Settings → Secrets and variables → Actions** do
+repositório. Para Codex e DeepSeek, as chaves precisam estar lá para o
+workflow rodar; o app não as envia ao GitHub.
+
 ## ChatGPT / Codex por assinatura
 
 O botão **Usar assinatura ChatGPT** usa o código de dispositivo oficial da
@@ -75,7 +91,7 @@ autorizar a sua própria conta GitHub pelo fluxo de dispositivo.
 
 - Use OAuth/App do GitHub com acesso somente ao repositório escolhido.
 - Prefira OAuth; se usar PAT, crie um fine-grained PAT limitado ao repositório e revogue-o ao deixar de usá-lo.
-- As chaves Gemini, DeepSeek, Anthropic e OpenAI não são enviadas ao GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
+- As chaves Gemini, DeepSeek, Anthropic e OpenAI guardadas no app não são enviadas ao GitHub. Para os agentes Codex e DeepSeek, a chave precisa ser cadastrada manualmente como secret do repositório, porque o workflow roda no GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
 - Tokens de Claude/Codex/DeepSeek nunca entram em Issues, commits ou logs.
 - Assinaturas Claude Pro/Max e ChatGPT/Codex não são chaves de API. Claude Code e Codex por assinatura exigem os fluxos oficiais e um runtime complementar; o app não disfarça uma chave de API como assinatura.
 - Para Actions, o app deve criptografar cada secret com a chave pública do repositório antes de enviá-lo à API do GitHub.

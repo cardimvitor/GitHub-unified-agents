@@ -10,6 +10,7 @@ import { githubTarget } from '@/storage/github-target'
 
 type Entry = { author: string; text: string; plan?: boolean; created?: boolean }
 type Connected = { id: ChatTarget; label: string }
+type Executor = 'claude' | 'codex' | 'deepseek'
 type ModelState = { models: string[]; selected: string | null; active: string }
 
 // Instrução do modo planejamento: produz um plano revisável, sem executar nada.
@@ -21,6 +22,13 @@ const PLANNING_INSTRUCTION = [
   '3) Riscos e perguntas em aberto.',
   'Termine com a linha "Pronto para executar." quando o plano estiver completo.'
 ].join('\n')
+
+// Agentes que executam o plano no GitHub Actions. Cada um tem um workflow que reage à menção.
+const EXECUTORS: Array<{ id: Executor; label: string; mention: string }> = [
+  { id: 'claude', label: 'Claude', mention: '@claude' },
+  { id: 'codex', label: 'Codex', mention: '@codex' },
+  { id: 'deepseek', label: 'DeepSeek', mention: '@deepseek' }
+]
 
 function titleFrom(plan: string) {
   const line = plan.split('\n').map((item) => item.replace(/[#*`]/g, '').trim()).find(Boolean) ?? 'Tarefa do planejamento'
@@ -37,6 +45,7 @@ export default function SharedChatScreen() {
   const [busy, setBusy] = useState(false)
   const [planning, setPlanning] = useState(true)
   const [repository, setRepository] = useState('')
+  const [executor, setExecutor] = useState<Executor>('claude')
   const [githubConnected, setGithubConnected] = useState(false)
   const insets = useSafeAreaInsets()
   const messagesRef = useRef<ScrollView>(null)
@@ -99,8 +108,9 @@ export default function SharedChatScreen() {
     const [owner, name] = repoParts
     setBusy(true)
     try {
-      const issue = await createIssue(token, owner, name, titleFrom(plan.text), `${plan.text}\n\n---\n@claude execute o plano acima neste repositório e abra um pull request.`)
-      setEntries((current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issue criada: ${issue.html_url}\nO workflow Claude Code começa a executar o plano.` }))
+      const mention = EXECUTORS.find((item) => item.id === executor)?.mention ?? '@claude'
+      const issue = await createIssue(token, owner, name, titleFrom(plan.text), `${plan.text}\n\n---\n${mention} execute o plano acima neste repositório e abra um pull request.`)
+      setEntries((current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issue criada: ${issue.html_url}\n${mention} vai executar o plano pelo GitHub Actions.` }))
     } catch (error) {
       setEntries((current) => [...current, { author: 'GitHub', text: error instanceof Error ? error.message : 'Não foi possível criar a Issue.' }])
     } finally {
@@ -124,6 +134,12 @@ export default function SharedChatScreen() {
       </Pressable>
     </View>
 
+    {planning ? <View style={styles.providers}>
+      {EXECUTORS.map((item) => <Pressable key={item.id} onPress={() => setExecutor(item.id)} style={[styles.chip, executor === item.id && styles.chipSelected]}>
+        <Text style={[styles.chipText, executor === item.id && styles.chipTextSelected]}>Executar com {item.label}</Text>
+      </Pressable>)}
+    </View> : null}
+
     {planning ? <View style={styles.repoRow}>
       <TextInput value={repository} onChangeText={(value) => { setRepository(value); void githubTarget.save(value.trim()) }} autoCapitalize="none" autoCorrect={false} placeholder="dono/repositorio" placeholderTextColor="#64748b" style={styles.repoInput} />
       <Text style={styles.repoHint}>{!githubConnected ? 'GitHub não conectado' : validRepo ? 'Issue com @claude' : 'Informe dono/repositorio'}</Text>
@@ -144,7 +160,7 @@ export default function SharedChatScreen() {
         <Text style={styles.author}>{entry.author}</Text>
         <Text style={styles.messageText}>{entry.text}</Text>
         {entry.plan && !entry.created && validRepo && githubConnected ? <Pressable onPress={() => void createIssueFrom(index)} disabled={busy} style={[styles.issueButton, busy && styles.disabled]}>
-          <Text style={styles.issueButtonText}>Criar Issue com @claude em {repository.trim()}</Text>
+          <Text style={styles.issueButtonText}>Criar Issue com {EXECUTORS.find((item) => item.id === executor)?.mention} em {repository.trim()}</Text>
         </Pressable> : null}
       </View>)}
     </ScrollView>

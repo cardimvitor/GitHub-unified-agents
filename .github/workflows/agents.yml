@@ -1,0 +1,76 @@
+name: Agents (Codex, DeepSeek)
+
+# Claude Code continua em claude-code.yml (@claude). Este arquivo cobre @codex e @deepseek.
+# Cada execução cria um branch agent/<agente>-issue-N com as alterações e abre um PR em rascunho.
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  codex:
+    if: |
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@codex')) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@codex'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      TASK: ${{ github.event.comment.body || github.event.issue.body }}
+      ISSUE: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex@0.163.0
+      - name: Run Codex
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          test -n "$OPENAI_API_KEY"
+          printf '%s' "$TASK" > "$RUNNER_TEMP/task.md"
+          printenv OPENAI_API_KEY | codex login --with-api-key
+          codex exec -s workspace-write -o "$RUNNER_TEMP/codex-last.md" "$(cat "$RUNNER_TEMP/task.md")"
+      - name: Open draft pull request
+        run: bash .github/scripts/open-agent-pr.sh codex
+
+  deepseek:
+    if: |
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@deepseek')) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@deepseek'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      TASK: ${{ github.event.comment.body || github.event.issue.body }}
+      ISSUE: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install aider
+        run: pip install aider-chat==0.86.2
+      - name: Run DeepSeek through aider
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          test -n "$DEEPSEEK_API_KEY"
+          printf '%s' "$TASK" > "$RUNNER_TEMP/task.md"
+          aider --model deepseek/deepseek-v4-pro --yes-always --no-show-model-warnings --message-file "$RUNNER_TEMP/task.md"
+      - name: Open draft pull request
+        run: bash .github/scripts/open-agent-pr.sh deepseek
