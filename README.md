@@ -64,9 +64,18 @@ Se preferir o caminho oficial, use `OPENAI_API_KEY`, cobrada à parte da assinat
 
 Os workflows de agentes só rodam quando quem abre a Issue ou comenta é dono, membro ou colaborador do repositório. O repositório é público, então sem essa checagem qualquer pessoa poderia disparar um job com acesso aos secrets.
 
-Os secrets ficam em **Settings → Secrets and variables → Actions** do
-repositório. Para Codex e DeepSeek, as chaves precisam estar lá para o
-workflow rodar; o app não as envia ao GitHub.
+Os secrets dos agentes ficam no environment **agents** (Settings → Environments),
+e não no repositório. Os jobs dos agentes declaram `environment: agents`, então
+o GitHub só entrega os valores depois que o revisor aprovar a execução.
+
+- **Repositório público:** o app coloca você como revisor obrigatório. Nenhuma
+  execução roda, nem recebe os secrets, sem a sua aprovação.
+- **Repositório privado (Free, Pro ou Team):** a exigência de revisor não é aceita
+  pelo GitHub. O environment é criado sem aprovação, e o app avisa isso. Nesse
+  caso, a proteção fica só no controle de acesso ao repositório.
+
+Para Codex e DeepSeek, as chaves precisam estar no environment para o workflow
+rodar. O app não as recebe do GitHub nem as envia ao GitHub.
 
 ## ChatGPT / Codex por assinatura
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { setRepositorySecret } from '@/github/secrets'
+import { setEnvironmentSecret } from '@/github/secrets'
+import { AGENTS_ENVIRONMENT, ensureAgentsEnvironment } from '@/github/environments'
 import { githubSession } from '@/storage/github-session'
 
 export default function SetupClaudeSubscription() {
@@ -15,7 +16,7 @@ export default function SetupClaudeSubscription() {
     const github = await githubSession.read()
     if (!github) return setMessage('Conecte o GitHub antes de configurar Claude.')
     setBusy(true)
-    try { await setRepositorySecret(github, owner, repo, 'CLAUDE_CODE_OAUTH_TOKEN', token.trim()); setToken(''); setMessage('Secret configurado com segurança. Use @claude em uma Issue para iniciar o workflow.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível configurar o Secret.') } finally { setBusy(false) }
+    try { const env = await ensureAgentsEnvironment(github, `${owner}/${repo}`); await setEnvironmentSecret(github, env.repositoryId, AGENTS_ENVIRONMENT, 'CLAUDE_CODE_OAUTH_TOKEN', token.trim()); setToken(''); setMessage(`Secret salvo no environment ${AGENTS_ENVIRONMENT}. ${env.message}`) } catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível configurar o Secret.') } finally { setBusy(false) }
   }
   return <View style={styles.page}><Text style={styles.title}>Configurar Claude por assinatura</Text><Text style={styles.copy}>{message}</Text><TextInput value={repository} onChangeText={setRepository} autoCapitalize="none" placeholder="dono/repositorio" placeholderTextColor="#64748b" style={styles.input}/><TextInput value={token} onChangeText={setToken} autoCapitalize="none" secureTextEntry placeholder="Token Claude Code" placeholderTextColor="#64748b" style={styles.input}/><Pressable disabled={busy} onPress={() => void send()} style={[styles.button, busy && styles.disabled]}>{busy ? <ActivityIndicator color="#fff"/> : <Text style={styles.buttonText}>Criptografar e enviar ao GitHub</Text>}</Pressable></View>
 }

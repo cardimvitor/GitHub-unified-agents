@@ -29,7 +29,7 @@ printf '  %s\n' "${FILES[@]}"
 cat <<'NEXT'
 
 Falta configurar neste repositório (cada um é próprio dele):
-  1. Secrets em Settings → Secrets and variables → Actions:
+  1. Secrets no environment agents (Settings → Environments → agents), não no repositório:
      - CLAUDE_CODE_OAUTH_TOKEN  (agente Claude)
      - OPENAI_API_KEY ou CODEX_AUTH_JSON (agente Codex; o segundo é assinatura não oficial, ver README)
      - DEEPSEEK_API_KEY         (agente DeepSeek)

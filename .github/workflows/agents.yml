@@ -16,6 +16,7 @@ jobs:
       (github.event_name == 'issues' && contains(github.event.issue.body, '@codex') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '{mention}') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    environment: agents
     permissions:
       contents: write
       pull-requests: write
@@ -81,6 +82,7 @@ jobs:
       (github.event_name == 'issues' && contains(github.event.issue.body, '@deepseek') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '{mention}') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    environment: agents
     permissions:
       contents: write
       pull-requests: write

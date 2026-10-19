@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { githubTarget } from '@/storage/github-target'
 import { githubSession } from '@/storage/github-session'
-import { configureAgents, createRepository, enableCopilotReview, listRepositories, listSecretNames, REQUIRED_SECRETS, type RepositoryInfo } from '@/github/repositories'
+import { configureAgents, createRepository, enableCopilotReview, listRepositories, REQUIRED_SECRETS, type RepositoryInfo } from '@/github/repositories'
+import { ensureAgentsEnvironment, environmentSecretNames, repositoryInfo } from '@/github/environments'
 
 type Props = {
   repository: string
@@ -40,7 +41,9 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
   }
 
   async function checkSecrets(fullName: string) {
-    const names = await listSecretNames(await token(), fullName)
+    const authToken = await token()
+    const repo = await repositoryInfo(authToken, fullName)
+    const names = await environmentSecretNames(authToken, repo.id)
     setMissing(REQUIRED_SECRETS.filter((name) => !names.includes(name)))
   }
 
@@ -73,9 +76,10 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
     await run('Configurando agentes…', async () => {
       const authToken = await token()
       await configureAgents(authToken, fullName, (path) => setStatus(`Gravando ${path}…`))
+      const environment = await ensureAgentsEnvironment(authToken, fullName)
       const copilot = await enableCopilotReview(authToken, fullName)
       await checkSecrets(fullName)
-      setStatus(`Agentes configurados. ${copilot.message}`)
+      setStatus(`Agentes configurados. ${environment.message} ${copilot.message}`)
     })
   }
 
@@ -112,7 +116,7 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
 
     {busy ? <ActivityIndicator color="#60a5fa" /> : null}
     {status ? <Text style={styles.status}>{status}</Text> : null}
-    {repository && missing.length > 0 ? <Text style={styles.missing}>Falta neste repositório: {missing.join(', ')}. Cadastre em Settings → Secrets and variables → Actions. Também ligue a revisão automática do Copilot.</Text> : null}
+    {repository && missing.length > 0 ? <Text style={styles.missing}>Falta no environment agents: {missing.join(', ')}. Cadastre em Settings → Environments → agents. Também ligue a revisão automática do Copilot.</Text> : null}
   </View>
 }
 
