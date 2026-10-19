@@ -1,8 +1,10 @@
+import { Link } from 'expo-router'
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { githubTarget } from '@/storage/github-target'
 import { githubSession } from '@/storage/github-session'
-import { configureAgents, createRepository, enableCopilotReview, listRepositories, REQUIRED_SECRETS, type RepositoryInfo } from '@/github/repositories'
+import { configureAgents, createRepository, enableCopilotReview, listRepositories, type RepositoryInfo } from '@/github/repositories'
+import { missingSecrets, pushAgentSecrets, type SecretReport } from '@/github/agent-secrets'
 import { ensureAgentsEnvironment, environmentSecretNames, repositoryInfo } from '@/github/environments'
 
 type Props = {
@@ -21,6 +23,7 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string>()
   const [missing, setMissing] = useState<string[]>([])
+  const [reports, setReports] = useState<SecretReport[]>([])
 
   async function token() {
     const value = await githubSession.read()
@@ -44,7 +47,7 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
     const authToken = await token()
     const repo = await repositoryInfo(authToken, fullName)
     const names = await environmentSecretNames(authToken, repo.id)
-    setMissing(REQUIRED_SECRETS.filter((name) => !names.includes(name)))
+    setMissing(missingSecrets(names))
   }
 
   async function select(fullName: string) {
@@ -77,6 +80,8 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
       const authToken = await token()
       await configureAgents(authToken, fullName, (path) => setStatus(`Gravando ${path}…`))
       const environment = await ensureAgentsEnvironment(authToken, fullName)
+      setStatus('Enviando credenciais ao environment…')
+      setReports(await pushAgentSecrets(authToken, environment.repositoryId))
       const copilot = await enableCopilotReview(authToken, fullName)
       await checkSecrets(fullName)
       setStatus(`Agentes configurados. ${environment.message} ${copilot.message}`)
@@ -116,7 +121,9 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
 
     {busy ? <ActivityIndicator color="#60a5fa" /> : null}
     {status ? <Text style={styles.status}>{status}</Text> : null}
-    {repository && missing.length > 0 ? <Text style={styles.missing}>Falta no environment agents: {missing.join(', ')}. Cadastre em Settings → Environments → agents. Também ligue a revisão automática do Copilot.</Text> : null}
+    {reports.map((report) => <Text key={report.name} style={report.ok ? styles.ok : styles.missing}>{report.ok ? '✓' : '✗'} {report.name}: {report.detail}</Text>)}
+    {repository && missing.length > 0 ? <Text style={styles.missing}>Ainda falta no environment agents: {missing.join(', ')}. O app envia sozinho o que ele já tem; o resto você cadastra em Settings → Environments → agents.</Text> : null}
+    {repository && missing.includes('CLAUDE_CODE_OAUTH_TOKEN') ? <Link href="/setup-claude-subscription" style={styles.link}>Guardar o token do Claude neste aparelho</Link> : null}
   </View>
 }
 
@@ -133,5 +140,7 @@ const styles = StyleSheet.create({
   createRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   input: { flex: 1, color: '#f8fafc', backgroundColor: '#0f172a', borderRadius: 8, fontSize: 13, paddingHorizontal: 8, paddingVertical: 6 },
   status: { color: '#94a3b8', fontSize: 12 },
-  missing: { color: '#fbbf24', fontSize: 12, lineHeight: 17 }
+  missing: { color: '#fbbf24', fontSize: 12, lineHeight: 17 },
+  ok: { color: '#a7f3d0', fontSize: 12, lineHeight: 17 },
+  link: { color: '#93c5fd', fontSize: 13, fontWeight: '700', paddingVertical: 4 }
 })

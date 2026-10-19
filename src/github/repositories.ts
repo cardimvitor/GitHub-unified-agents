@@ -79,7 +79,6 @@ export async function listSecretNames(token: string, fullName: string): Promise<
   return (data?.secrets ?? []).map((secret) => secret.name)
 }
 
-export const REQUIRED_SECRETS = ['CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY', 'DEEPSEEK_API_KEY']
 
 const COPILOT_RULESET = 'Copilot code review'
 

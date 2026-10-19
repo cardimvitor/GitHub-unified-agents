@@ -74,8 +74,19 @@ o GitHub só entrega os valores depois que o revisor aprovar a execução.
   pelo GitHub. O environment é criado sem aprovação, e o app avisa isso. Nesse
   caso, a proteção fica só no controle de acesso ao repositório.
 
-Para Codex e DeepSeek, as chaves precisam estar no environment para o workflow
-rodar. O app não as recebe do GitHub nem as envia ao GitHub.
+Ao configurar agentes em um repositório, o app envia sozinho ao environment as
+credenciais que já tem, cifradas com a chave pública do GitHub:
+
+| Secret | Origem no app |
+| --- | --- |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Token do Claude guardado uma vez na tela "Configurar Claude" (vem de `claude setup-token`, que o app não executa) |
+| `DEEPSEEK_API_KEY` | Chave do DeepSeek conectada no app |
+| `OPENAI_API_KEY` | Chave da OpenAI conectada no app (caminho oficial do Codex) |
+| `CODEX_AUTH_JSON` | Login da assinatura ChatGPT do app, **só se não houver API key da OpenAI** (não oficial, ver acima) |
+
+O que o app não tem no aparelho fica listado como faltando. O token de renovação do
+ChatGPT gira: quando o app renova a sessão, a cópia no GitHub pode parar de
+funcionar, e é preciso configurar o repositório de novo.
 
 ## ChatGPT / Codex por assinatura
 
@@ -129,7 +140,7 @@ autorizar a sua própria conta GitHub pelo fluxo de dispositivo.
 
 - Use OAuth/App do GitHub com acesso somente ao repositório escolhido.
 - Prefira OAuth; se usar PAT, crie um fine-grained PAT limitado ao repositório e revogue-o ao deixar de usá-lo.
-- As chaves Gemini, DeepSeek, Anthropic e OpenAI guardadas no app não são enviadas ao GitHub. Para os agentes Codex e DeepSeek, a chave precisa ser cadastrada manualmente como secret do repositório, porque o workflow roda no GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
+- As chaves Gemini e Anthropic guardadas no app não saem do aparelho. As chaves do DeepSeek e da OpenAI, o token do Claude e (sem API key) o login do ChatGPT são enviados, cifrados, ao environment `agents` de cada repositório que você configurar, porque os workflows rodam no GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
 - Tokens de Claude/Codex/DeepSeek nunca entram em Issues, commits ou logs.
 - Assinaturas Claude Pro/Max e ChatGPT/Codex não são chaves de API. Claude Code e Codex por assinatura exigem os fluxos oficiais e um runtime complementar; o app não disfarça uma chave de API como assinatura.
 - Para Actions, o app deve criptografar cada secret com a chave pública do repositório antes de enviá-lo à API do GitHub.
