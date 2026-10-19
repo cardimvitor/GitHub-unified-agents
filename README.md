@@ -62,6 +62,8 @@ gh secret set CODEX_AUTH_JSON --repo dono/repositorio < ~/.codex/auth.json
 
 Se preferir o caminho oficial, use `OPENAI_API_KEY`, cobrada à parte da assinatura.
 
+Os workflows de agentes só rodam quando quem abre a Issue ou comenta é dono, membro ou colaborador do repositório. O repositório é público, então sem essa checagem qualquer pessoa poderia disparar um job com acesso aos secrets.
+
 Os secrets ficam em **Settings → Secrets and variables → Actions** do
 repositório. Para Codex e DeepSeek, as chaves precisam estar lá para o
 workflow rodar; o app não as envia ao GitHub.
