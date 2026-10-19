@@ -116,8 +116,9 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
     </View> : null}
 
     {repository && !busy && mode === 'closed' ? <Pressable onPress={() => void configure(repository)} style={styles.setup}>
-      <Text style={styles.buttonText}>Configurar agentes neste repositório</Text>
+      <Text style={styles.buttonText}>Setup</Text>
     </Pressable> : null}
+    {repository && !busy && mode === 'closed' ? <Text style={styles.status}>Setup grava os arquivos dos agentes, cria o environment, envia as credenciais que o app tem e tenta ligar a revisão do Copilot.</Text> : null}
 
     {busy ? <ActivityIndicator color="#60a5fa" /> : null}
     {status ? <Text style={styles.status}>{status}</Text> : null}
