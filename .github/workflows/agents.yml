@@ -54,10 +54,24 @@ jobs:
           } > "$RUNNER_TEMP/prompt.md"
       - name: Run Codex
         env:
+          # Opção 1 (assinatura ChatGPT, NÃO oficial em CI): conteúdo de ~/.codex/auth.json de uma máquina já logada.
+          # Opção 2 (oficial, cobrada à parte): OPENAI_API_KEY.
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          test -n "$OPENAI_API_KEY"
-          printenv OPENAI_API_KEY | codex login --with-api-key
+          if [ -n "$CODEX_AUTH_JSON" ]; then
+            umask 077
+            mkdir -p "$HOME/.codex"
+            printf '%s' "$CODEX_AUTH_JSON" > "$HOME/.codex/auth.json"
+            echo "Codex: usando o login salvo em CODEX_AUTH_JSON."
+          elif [ -n "$OPENAI_API_KEY" ]; then
+            printenv OPENAI_API_KEY | codex login --with-api-key
+            echo "Codex: usando OPENAI_API_KEY."
+          else
+            echo "Configure o secret CODEX_AUTH_JSON ou OPENAI_API_KEY." >&2
+            exit 1
+          fi
+          codex login status
           codex exec -s workspace-write -o "$RUNNER_TEMP/codex-last.md" "$(cat "$RUNNER_TEMP/prompt.md")"
       - name: Open draft pull request
         run: bash .github/scripts/open-agent-pr.sh codex "$RUNNER_TEMP/codex-last.md"

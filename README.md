@@ -32,7 +32,7 @@ rascunho. Nenhum agente faz merge.
 | Agente | Menção | Workflow | Secret necessário |
 | --- | --- | --- | --- |
 | Claude Code | `@claude` | `claude-code.yml` | `CLAUDE_CODE_OAUTH_TOKEN` (assinatura Claude Pro/Max) |
-| Codex | `@codex` | `agents.yml` | `OPENAI_API_KEY` (API key; o login por assinatura não é usado em CI) |
+| Codex | `@codex` | `agents.yml` | `CODEX_AUTH_JSON` (assinatura ChatGPT, **não oficial**) ou `OPENAI_API_KEY` (API key, oficial, cobrada à parte) |
 | DeepSeek | `@deepseek` | `agents.yml` | `DEEPSEEK_API_KEY` (usa aider com `deepseek/deepseek-v4-pro`) |
 
 Os agentes se coordenam por um quadro no próprio repositório, em
@@ -41,6 +41,26 @@ o quadro e não repete uma Issue que já está em andamento ou com PR aberto. As
 regras que todos os agentes recebem estão em `AGENTS.md` (`CLAUDE.md` importa
 esse arquivo). Todo PR traz a seção **Para os outros agentes**, com o que mudou,
 por quê, o que ficou fora e como testar.
+
+### Codex com assinatura ChatGPT (não oficial)
+
+A documentação do Codex não prevê login por assinatura em CI. O workaround é
+copiar o `~/.codex/auth.json` de uma máquina onde você já fez `codex login`
+e guardá-lo como secret `CODEX_AUTH_JSON`. Antes de usar, entenda os riscos:
+
+- O arquivo tem tokens de acesso e de renovação. Quem tiver o secret usa a sua conta ChatGPT.
+- Os tokens de renovação giram. Quando a sessão da sua máquina renova, a cópia no GitHub
+  pode parar de funcionar. Nesse caso, gere de novo e atualize o secret.
+- Não encontrei fonte oficial que permita esse uso em automação. Pode violar os termos da OpenAI.
+- Quem roda CI não grava o token de volta: a renovação feita dentro do runner se perde.
+
+Para cadastrar o secret a partir da sua máquina (sem colar o conteúdo no chat):
+
+```sh
+gh secret set CODEX_AUTH_JSON --repo dono/repositorio < ~/.codex/auth.json
+```
+
+Se preferir o caminho oficial, use `OPENAI_API_KEY`, cobrada à parte da assinatura.
 
 Os secrets ficam em **Settings → Secrets and variables → Actions** do
 repositório. Para Codex e DeepSeek, as chaves precisam estar lá para o
