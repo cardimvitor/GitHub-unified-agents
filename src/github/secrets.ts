@@ -1,5 +1,10 @@
+import * as Crypto from 'expo-crypto'
 import nacl from 'tweetnacl'
 import blake from 'blakejs/blake2b'
+
+// No React Native o tweetnacl não encontra um gerador de números aleatórios e falha com "no PRNG".
+// Usamos o gerador nativo do expo-crypto.
+nacl.setPRNG((output: Uint8Array, length: number) => { output.set(Crypto.getRandomBytes(length)) })
 
 const encoder = new TextEncoder()
 
