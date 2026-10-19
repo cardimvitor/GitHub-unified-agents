@@ -80,3 +80,32 @@ export async function listSecretNames(token: string, fullName: string): Promise<
 }
 
 export const REQUIRED_SECRETS = ['CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY', 'DEEPSEEK_API_KEY']
+
+const COPILOT_RULESET = 'Copilot code review'
+
+// Liga a revisão automática do Copilot na branch padrão, por um ruleset. Não duplica se já existir.
+// Os nomes do tipo de regra e dos parâmetros não foram conferidos contra a referência da API: se o GitHub recusar,
+// a mensagem dele aparece no app e a ativação pode ser feita em Settings → Rules.
+export async function enableCopilotReview(token: string, fullName: string): Promise<{ ok: boolean; message: string }> {
+  const [owner, repo] = fullName.split('/')
+  try {
+    const existing = await api<Array<{ name: string }>>(token, `/repos/${owner}/${repo}/rulesets`) ?? []
+    if (existing.some((ruleset) => ruleset.name === COPILOT_RULESET)) {
+      return { ok: true, message: 'Revisão do Copilot já estava ligada.' }
+    }
+    await api(token, `/repos/${owner}/${repo}/rulesets`, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: COPILOT_RULESET,
+        target: 'branch',
+        enforcement: 'active',
+        conditions: { ref_name: { include: ['~DEFAULT_BRANCH'], exclude: [] } },
+        rules: [{ type: 'copilot_code_review', parameters: { review_on_push: true, review_draft_pull_requests: false } }]
+      })
+    })
+    return { ok: true, message: 'Revisão automática do Copilot ligada.' }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'erro desconhecido'
+    return { ok: false, message: `Não foi possível ligar a revisão do Copilot pela API: ${reason} Ative em Settings → Rules, criando um ruleset com a regra de revisão automática do Copilot.` }
+  }
+}

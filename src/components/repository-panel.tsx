@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { githubTarget } from '@/storage/github-target'
 import { githubSession } from '@/storage/github-session'
-import { configureAgents, createRepository, listRepositories, listSecretNames, REQUIRED_SECRETS, type RepositoryInfo } from '@/github/repositories'
+import { configureAgents, createRepository, enableCopilotReview, listRepositories, listSecretNames, REQUIRED_SECRETS, type RepositoryInfo } from '@/github/repositories'
 
 type Props = {
   repository: string
@@ -73,8 +73,9 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
     await run('Configurando agentes…', async () => {
       const authToken = await token()
       await configureAgents(authToken, fullName, (path) => setStatus(`Gravando ${path}…`))
+      const copilot = await enableCopilotReview(authToken, fullName)
       await checkSecrets(fullName)
-      setStatus('Agentes configurados. Falta o que está listado abaixo.')
+      setStatus(`Agentes configurados. ${copilot.message}`)
     })
   }
 
