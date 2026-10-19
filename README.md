@@ -35,6 +35,13 @@ rascunho. Nenhum agente faz merge.
 | Codex | `@codex` | `agents.yml` | `OPENAI_API_KEY` (API key; o login por assinatura não é usado em CI) |
 | DeepSeek | `@deepseek` | `agents.yml` | `DEEPSEEK_API_KEY` (usa aider com `deepseek/deepseek-v4-pro`) |
 
+Os agentes se coordenam por um quadro no próprio repositório, em
+`.agents/tasks/` (um JSON por Issue). Antes de cada execução o workflow confere
+o quadro e não repete uma Issue que já está em andamento ou com PR aberto. As
+regras que todos os agentes recebem estão em `AGENTS.md` (`CLAUDE.md` importa
+esse arquivo). Todo PR traz a seção **Para os outros agentes**, com o que mudou,
+por quê, o que ficou fora e como testar.
+
 Os secrets ficam em **Settings → Secrets and variables → Actions** do
 repositório. Para Codex e DeepSeek, as chaves precisam estar lá para o
 workflow rodar; o app não as envia ao GitHub.
