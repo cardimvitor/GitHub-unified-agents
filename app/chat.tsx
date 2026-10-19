@@ -1,6 +1,7 @@
 import { useFocusEffect } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { askProvider, connectedTargets, modelsFor, setModelFor, type ChatTarget } from '@/providers/chat'
 
@@ -17,6 +18,7 @@ export default function SharedChatScreen() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [busy, setBusy] = useState(false)
   const insets = useSafeAreaInsets()
+  const messagesRef = useRef<ScrollView>(null)
 
   useFocusEffect(useCallback(() => {
     void connectedTargets().then((list) => {
@@ -55,7 +57,8 @@ export default function SharedChatScreen() {
         .map((entry) => `${entry.author}: ${entry.text}`)
         .join('\n\n')
       const answer = await askProvider(target, `Responda em português, quando apropriado. Conversa compartilhada:\n\n${transcript}`)
-      setEntries((current) => [...current, { author: `${targetLabel} · ${answer.model}`, text: answer.text }])
+      const served = answer.model === answer.requested ? answer.model : `${answer.model} (pedido: ${answer.requested})`
+      setEntries((current) => [...current, { author: `${targetLabel} · ${served}`, text: answer.text }])
     } catch (error) {
       setEntries((current) => [...current, { author: targetLabel || 'Erro', text: error instanceof Error ? error.message : 'Não foi possível obter resposta.' }])
     } finally {
@@ -69,7 +72,7 @@ export default function SharedChatScreen() {
     </View>
   }
 
-  return <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+  return <KeyboardAvoidingView style={styles.page} behavior="padding">
     <View style={styles.providers}>
       {connected.map((item) => <Pressable key={item.id} onPress={() => setTarget(item.id)} style={[styles.chip, target === item.id && styles.chipSelected]}>
         <Text style={[styles.chipText, target === item.id && styles.chipTextSelected]}>{item.label}</Text>
@@ -86,7 +89,7 @@ export default function SharedChatScreen() {
       </Pressable>)}
     </ScrollView> : null}
 
-    <ScrollView style={styles.messages} contentContainerStyle={styles.messagesContent}>
+    <ScrollView ref={messagesRef} style={styles.messages} contentContainerStyle={styles.messagesContent} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: true })}>
       {entries.length === 0 ? <Text style={styles.empty}>Descreva a tarefa para planejar. O histórico fica só nesta tela e some ao sair.</Text> : entries.map((entry, index) => <View key={`${entry.author}-${index}`} style={styles.message}>
         <Text style={styles.author}>{entry.author}</Text>
         <Text style={styles.messageText}>{entry.text}</Text>
