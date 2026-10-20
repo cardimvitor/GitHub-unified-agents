@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { approveRun, listAgentIssues, listPendingRuns, listRecentAgentRuns, type AgentIssue, type AgentRun, type PendingRun } from '@/github/agents-status'
+import { approveRun, closeIssue, listAgentIssues, listPendingRuns, listRecentAgentRuns, type AgentIssue, type AgentRun, type PendingRun } from '@/github/agents-status'
 import { githubSession } from '@/storage/github-session'
 import { githubTarget } from '@/storage/github-target'
 
@@ -49,6 +49,21 @@ export default function AgentsScreen() {
 
   useFocusEffect(useCallback(() => { void refresh() }, []))
 
+  async function close(issue: AgentIssue) {
+    const token = await githubSession.read()
+    if (!token || !repository) return
+    setBusy(true)
+    try {
+      await closeIssue(token, repository, issue.number)
+      setMessage(`Issue #${issue.number} fechada.`)
+      await refresh()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível fechar a Issue.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function approve(list: PendingRun[]) {
     const token = await githubSession.read()
     if (!token || !repository) return
@@ -92,7 +107,10 @@ export default function AgentsScreen() {
         <Text style={styles.cardTitle}>#{issue.number} {issue.title}</Text>
         <Text style={styles.meta}>{issue.mentions.join(' ')} · {issue.state === 'open' ? 'aberta' : 'fechada'}</Text>
         <Text style={[styles.status, { color: status.color }]}>{status.label}</Text>
-        <Pressable onPress={() => void Linking.openURL(status.url)}><Text style={styles.linkText}>Abrir no GitHub</Text></Pressable>
+        <View style={styles.row}>
+          <Pressable onPress={() => void Linking.openURL(status.url)} style={styles.link}><Text style={styles.linkText}>Abrir no GitHub</Text></Pressable>
+          {issue.state === 'open' ? <Pressable onPress={() => void close(issue)} disabled={busy} style={styles.closeIssue}><Text style={styles.buttonText}>Fechar issue</Text></Pressable> : null}
+        </View>
       </View>
     })}
   </ScrollView>
@@ -116,5 +134,6 @@ const styles = StyleSheet.create({
   approveAll: { backgroundColor: '#0f766e', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   link: { paddingVertical: 8 },
+  closeIssue: { backgroundColor: '#7f1d1d', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   linkText: { color: '#93c5fd', fontSize: 13, fontWeight: '700' }
 })

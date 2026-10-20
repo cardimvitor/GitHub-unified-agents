@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { createIssue } from '@/github/repository'
+import { bodyForExecutor } from '@/github/agents-status'
 import { askProvider, connectedTargets, modelsFor, setModelFor, type ChatTarget } from '@/providers/chat'
 import { githubSession } from '@/storage/github-session'
 import { githubTarget } from '@/storage/github-target'
@@ -110,7 +111,7 @@ export default function SharedChatScreen() {
     setBusy(true)
     try {
       const mention = EXECUTORS.find((item) => item.id === executor)?.mention ?? '@claude'
-      const issue = await createIssue(token, owner, name, titleFrom(plan.text), `${plan.text}\n\n---\n${mention} execute o plano acima neste repositório e abra um pull request.`)
+      const issue = await createIssue(token, owner, name, titleFrom(plan.text), bodyForExecutor(plan.text, mention))
       setEntries((current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issue criada: ${issue.html_url}\n${mention} vai executar o plano pelo GitHub Actions.` }))
     } catch (error) {
       setEntries((current) => [...current, { author: 'GitHub', text: error instanceof Error ? error.message : 'Não foi possível criar a Issue.' }])

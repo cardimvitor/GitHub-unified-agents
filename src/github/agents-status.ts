@@ -69,3 +69,19 @@ export async function approveRun(token: string, fullName: string, run: PendingRu
     body: JSON.stringify({ environment_ids: [run.environmentId], state: 'approved', comment: 'Aprovado pelo app' })
   })
 }
+
+// Uma Issue, um agente: remove menções de outros agentes do texto do plano antes de criar a Issue.
+export function bodyForExecutor(plan: string, mention: string) {
+  const others = AGENT_MENTIONS.filter((item) => item !== mention)
+  let cleaned = plan
+  for (const other of others) cleaned = cleaned.split(other).join(other.slice(1))
+  return `${cleaned}\n\n---\n${mention} execute o plano acima neste repositório e abra um pull request.`
+}
+
+export async function closeIssue(token: string, fullName: string, number: number) {
+  await gh(token, `/repos/${fullName}/issues/${number}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ state: 'closed', state_reason: 'completed' })
+  })
+}
+

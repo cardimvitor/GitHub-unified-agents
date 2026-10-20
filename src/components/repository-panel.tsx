@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { githubTarget } from '@/storage/github-target'
 import { githubSession } from '@/storage/github-session'
-import { configureAgents, createRepository, enableCopilotReview, listRepositories, type RepositoryInfo } from '@/github/repositories'
+import { allowActionsPullRequests, configureAgents, createRepository, enableCopilotReview, listRepositories, type RepositoryInfo } from '@/github/repositories'
 import { missingSecrets, pushAgentSecrets, type SecretReport } from '@/github/agent-secrets'
 import { ensureAgentsEnvironment, environmentSecretNames, repositoryInfo } from '@/github/environments'
 import { agentSettings } from '@/storage/agent-settings'
@@ -93,8 +93,9 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
       setStatus('Enviando credenciais ao environment…')
       setReports(await pushAgentSecrets(authToken, environment.repositoryId))
       const copilot = await enableCopilotReview(authToken, fullName)
+      const pulls = await allowActionsPullRequests(authToken, fullName)
       await checkSecrets(fullName)
-      setStatus(`Agentes configurados. ${environment.message} ${copilot.message}`)
+      setStatus(`Agentes configurados. ${environment.message} ${copilot.message} ${pulls.message}`)
     })
   }
 

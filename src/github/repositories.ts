@@ -108,3 +108,19 @@ export async function enableCopilotReview(token: string, fullName: string): Prom
     return { ok: false, message: `Não foi possível ligar a revisão do Copilot pela API: ${reason} Ative em Settings → Rules, criando um ruleset com a regra de revisão automática do Copilot.` }
   }
 }
+
+// Permite que o GitHub Actions crie e aprove PRs, para os agentes abrirem o PR no fim da execução.
+export async function allowActionsPullRequests(token: string, fullName: string): Promise<{ ok: boolean; message: string }> {
+  const [owner, repo] = fullName.split('/')
+  try {
+    await api(token, `/repos/${owner}/${repo}/actions/permissions/workflow`, {
+      method: 'PUT',
+      body: JSON.stringify({ default_workflow_permissions: 'write', can_approve_pull_request_reviews: true })
+    })
+    return { ok: true, message: 'Actions pode criar PRs.' }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'erro desconhecido'
+    return { ok: false, message: `Não foi possível liberar Actions para criar PRs: ${reason}` }
+  }
+}
+
