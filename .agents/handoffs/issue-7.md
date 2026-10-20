@@ -1,0 +1,5 @@
+- **O que mudou**: adicionado `ANALISE_EXPLORATORIA.md` (raiz) com escopo, mapa de fluxos, achados classificados (defeitos, segurança, melhorias), priorização e próximos passos. Nenhum código foi alterado.
+- **Por que**: a Issue pede só o registro dos achados, sem corrigir. Como as perguntas em aberto não tinham resposta, assumi análise estática do repositório inteiro.
+- **O que ficou fora**: testes manuais, execução do app, `npm run typecheck`, módulo Kotlin e UX em dispositivo. Também não criei Issues no backlog; os próximos passos estão na seção 5 do documento.
+- **Como testar**: revisar o arquivo. Para conferir o achado D1: `grep -n "{mention}" .github/workflows/agents.yml`.
+- **Pontos de atenção**: o quadro `.agents/tasks/` estava vazio. D1, D2 e D3 mexem em arquivos também copiados em `src/github/agent-template.ts`; quem corrigir deve rodar `npm run gen:agent-template`. Os achados vieram de leitura, não de execução; D4 e S4 estão marcados como não reproduzidos/não verificados.
