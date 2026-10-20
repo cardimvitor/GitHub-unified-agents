@@ -1,11 +1,12 @@
 import { Link } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { githubTarget } from '@/storage/github-target'
 import { githubSession } from '@/storage/github-session'
 import { configureAgents, createRepository, enableCopilotReview, listRepositories, type RepositoryInfo } from '@/github/repositories'
 import { missingSecrets, pushAgentSecrets, type SecretReport } from '@/github/agent-secrets'
 import { ensureAgentsEnvironment, environmentSecretNames, repositoryInfo } from '@/github/environments'
+import { agentSettings } from '@/storage/agent-settings'
 
 type Props = {
   repository: string
@@ -24,6 +25,15 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
   const [status, setStatus] = useState<string>()
   const [missing, setMissing] = useState<string[]>([])
   const [reports, setReports] = useState<SecretReport[]>([])
+  const [automatic, setAutomatic] = useState(false)
+
+  useEffect(() => { void agentSettings.readAutomatic().then(setAutomatic) }, [])
+
+  async function toggleAutomatic() {
+    const next = !automatic
+    await agentSettings.saveAutomatic(next)
+    setAutomatic(next)
+  }
 
   async function token() {
     const value = await githubSession.read()
@@ -79,7 +89,7 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
     await run('Configurando agentes…', async () => {
       const authToken = await token()
       await configureAgents(authToken, fullName, (path) => setStatus(`Gravando ${path}…`))
-      const environment = await ensureAgentsEnvironment(authToken, fullName)
+      const environment = await ensureAgentsEnvironment(authToken, fullName, automatic)
       setStatus('Enviando credenciais ao environment…')
       setReports(await pushAgentSecrets(authToken, environment.repositoryId))
       const copilot = await enableCopilotReview(authToken, fullName)
@@ -118,6 +128,9 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
     {repository && !busy && mode === 'closed' ? <Pressable onPress={() => void configure(repository)} style={styles.setup}>
       <Text style={styles.buttonText}>Setup</Text>
     </Pressable> : null}
+    {repository && !busy && mode === 'closed' ? <Pressable onPress={() => void toggleAutomatic()} style={[styles.toggle, automatic && styles.toggleOn]}>
+      <Text style={styles.buttonText}>{automatic ? 'Automático: sem aprovação' : 'Exigir aprovação antes de rodar'}</Text>
+    </Pressable> : null}
     {repository && !busy && mode === 'closed' ? <Text style={styles.status}>Setup grava os arquivos dos agentes, cria o environment, envia as credenciais que o app tem e tenta ligar a revisão do Copilot.</Text> : null}
 
     {busy ? <ActivityIndicator color="#60a5fa" /> : null}
@@ -135,6 +148,8 @@ const styles = StyleSheet.create({
   button: { borderRadius: 8, backgroundColor: '#334155', paddingHorizontal: 8, paddingVertical: 6 },
   buttonText: { color: '#f8fafc', fontSize: 12, fontWeight: '700' },
   setup: { alignItems: 'center', backgroundColor: '#7c3aed', borderRadius: 8, paddingVertical: 8 },
+  toggle: { alignItems: 'center', backgroundColor: '#334155', borderRadius: 8, paddingVertical: 8 },
+  toggleOn: { backgroundColor: '#0f766e' },
   list: { maxHeight: 180, backgroundColor: '#0f172a', borderRadius: 8 },
   item: { paddingHorizontal: 10, paddingVertical: 9 },
   itemText: { color: '#cbd5e1', fontSize: 13 },

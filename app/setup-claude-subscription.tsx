@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { AGENTS_ENVIRONMENT, ensureAgentsEnvironment } from '@/github/environments'
 import { setEnvironmentSecret } from '@/github/secrets'
 import { agentCredentials } from '@/storage/agent-credentials'
+import { agentSettings } from '@/storage/agent-settings'
 import { githubSession } from '@/storage/github-session'
 import { githubTarget } from '@/storage/github-target'
 
@@ -36,7 +37,7 @@ export default function SetupClaudeSubscription() {
     try {
       await agentCredentials.saveClaude(value)
       setSaved(true)
-      const env = await ensureAgentsEnvironment(github, `${owner}/${repo}`)
+      const env = await ensureAgentsEnvironment(github, `${owner}/${repo}`, await agentSettings.readAutomatic())
       await setEnvironmentSecret(github, env.repositoryId, AGENTS_ENVIRONMENT, 'CLAUDE_CODE_OAUTH_TOKEN', value)
       setToken('')
       setMessage(`Secret salvo no environment ${AGENTS_ENVIRONMENT} de ${repository.trim()}. ${env.message}`)

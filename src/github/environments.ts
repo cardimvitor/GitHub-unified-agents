@@ -32,8 +32,15 @@ export async function repositoryInfo(token: string, fullName: string) {
 
 // Cria o environment `agents`. Se a conta puder exigir aprovação, o usuário atual vira revisor obrigatório.
 // Em repositório privado nos planos Free, Pro e Team a aprovação não é aceita: cria sem revisor e avisa.
-export async function ensureAgentsEnvironment(token: string, fullName: string): Promise<{ repositoryId: number; protected: boolean; message: string }> {
+// Com automatic, o environment fica sem revisor: os agentes rodam sem a sua aprovação. Os secrets continuam
+// presos ao environment, então só os jobs dos agentes os recebem.
+export async function ensureAgentsEnvironment(token: string, fullName: string, automatic = false): Promise<{ repositoryId: number; protected: boolean; message: string }> {
   const repo = await repositoryInfo(token, fullName)
+  if (automatic) {
+    const open = await call(token, `/repos/${fullName}/environments/${AGENTS_ENVIRONMENT}`, { method: 'PUT', body: JSON.stringify({ reviewers: [] }) })
+    if (!open.ok) throw new Error(`Não foi possível configurar o environment agents sem aprovação (${open.status}). ${open.message}`)
+    return { repositoryId: repo.id, protected: false, message: 'Environment agents sem aprovação: os agentes rodam automaticamente para membros do repositório.' }
+  }
   const user = await call<{ id: number }>(token, '/user')
   if (!user.data) throw new Error('Não foi possível identificar sua conta GitHub.')
   const withReviewer = await call(token, `/repos/${fullName}/environments/${AGENTS_ENVIRONMENT}`, {
