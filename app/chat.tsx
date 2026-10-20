@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router'
+import { Link, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
@@ -141,6 +141,7 @@ export default function SharedChatScreen() {
       </Pressable>)}
     </View> : null}
 
+    <Link href="/agents" style={styles.agentsLink}>Issues e agentes</Link>
     {planning ? <RepositoryPanel repository={repository} githubConnected={githubConnected} onChange={setRepository} /> : null}
 
     <Text style={styles.modelHint}>{modelsError ?? (modelState ? 'Modelos disponíveis. Toque para usar na próxima mensagem.' : 'Carregando modelos…')}</Text>
@@ -195,5 +196,6 @@ const styles = StyleSheet.create({
   input: { flex: 1, minHeight: 44, maxHeight: 120, color: '#f8fafc', backgroundColor: '#1e293b', borderRadius: 10, fontSize: 15, paddingHorizontal: 12, paddingVertical: 10, textAlignVertical: 'top' },
   send: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#2563eb', borderRadius: 10, minHeight: 44, paddingHorizontal: 16 },
   sendText: { color: '#fff', fontWeight: '700' },
-  disabled: { opacity: 0.6 }
+  disabled: { opacity: 0.6 },
+  agentsLink: { color: '#93c5fd', fontSize: 13, fontWeight: '700', paddingVertical: 4 }
 })

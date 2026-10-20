@@ -23,6 +23,7 @@ export default function RootLayout() {
         <Stack.Screen name="connect-chatgpt" options={{ title: 'Conectar ChatGPT' }} />
         <Stack.Screen name="codex-guide" options={{ title: 'Codex por assinatura' }} />
         <Stack.Screen name="chat" options={{ title: 'Planejamento compartilhado' }} />
+        <Stack.Screen name="agents" options={{ title: 'Issues e agentes' }} />
       </Stack>
     </KeyboardProvider>
   )
