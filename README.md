@@ -23,6 +23,71 @@ Ele usa a assinatura Claude Pro/Max por meio do secret de Actions
 Gere o token com `claude setup-token`, faça o login oficial da Anthropic e
 adicione o valor em **Settings → Secrets and variables → Actions** do repositório.
 
+## Agentes no GitHub Actions
+
+O planejamento acontece no app. A execução acontece no GitHub: o app cria uma
+Issue com a menção do agente escolhido, e o workflow executa e abre um PR em
+rascunho. Nenhum agente faz merge.
+
+| Agente | Menção | Workflow | Secret necessário |
+| --- | --- | --- | --- |
+| Claude Code | `@claude` | `claude-code.yml` | `CLAUDE_CODE_OAUTH_TOKEN` (assinatura Claude Pro/Max) |
+| Codex | `@codex` | `agents.yml` | `CODEX_AUTH_JSON` (assinatura ChatGPT, **não oficial**) ou `OPENAI_API_KEY` (API key, oficial, cobrada à parte) |
+| DeepSeek | `@deepseek` | `agents.yml` | `DEEPSEEK_API_KEY` (usa aider com `deepseek/deepseek-v4-pro`) |
+
+Os agentes se coordenam por um quadro no próprio repositório, em
+`.agents/tasks/` (um JSON por Issue). Antes de cada execução o workflow confere
+o quadro e não repete uma Issue que já está em andamento ou com PR aberto. As
+regras que todos os agentes recebem estão em `AGENTS.md` (`CLAUDE.md` importa
+esse arquivo). Todo PR traz a seção **Para os outros agentes**, com o que mudou,
+por quê, o que ficou fora e como testar.
+
+### Codex com assinatura ChatGPT (não oficial)
+
+A documentação do Codex não prevê login por assinatura em CI. O workaround é
+copiar o `~/.codex/auth.json` de uma máquina onde você já fez `codex login`
+e guardá-lo como secret `CODEX_AUTH_JSON`. Antes de usar, entenda os riscos:
+
+- O arquivo tem tokens de acesso e de renovação. Quem tiver o secret usa a sua conta ChatGPT.
+- Os tokens de renovação giram. Quando a sessão da sua máquina renova, a cópia no GitHub
+  pode parar de funcionar. Nesse caso, gere de novo e atualize o secret.
+- Não encontrei fonte oficial que permita esse uso em automação. Pode violar os termos da OpenAI.
+- Quem roda CI não grava o token de volta: a renovação feita dentro do runner se perde.
+
+Para cadastrar o secret a partir da sua máquina (sem colar o conteúdo no chat):
+
+```sh
+gh secret set CODEX_AUTH_JSON --repo dono/repositorio < ~/.codex/auth.json
+```
+
+Se preferir o caminho oficial, use `OPENAI_API_KEY`, cobrada à parte da assinatura.
+
+Os workflows de agentes só rodam quando quem abre a Issue ou comenta é dono, membro ou colaborador do repositório. O repositório é público, então sem essa checagem qualquer pessoa poderia disparar um job com acesso aos secrets.
+
+Os secrets dos agentes ficam no environment **agents** (Settings → Environments),
+e não no repositório. Os jobs dos agentes declaram `environment: agents`, então
+o GitHub só entrega os valores depois que o revisor aprovar a execução.
+
+- **Repositório público:** o app coloca você como revisor obrigatório. Nenhuma
+  execução roda, nem recebe os secrets, sem a sua aprovação.
+- **Repositório privado (Free, Pro ou Team):** a exigência de revisor não é aceita
+  pelo GitHub. O environment é criado sem aprovação, e o app avisa isso. Nesse
+  caso, a proteção fica só no controle de acesso ao repositório.
+
+Ao configurar agentes em um repositório, o app envia sozinho ao environment as
+credenciais que já tem, cifradas com a chave pública do GitHub:
+
+| Secret | Origem no app |
+| --- | --- |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Token do Claude guardado uma vez na tela "Configurar Claude" (vem de `claude setup-token`, que o app não executa) |
+| `DEEPSEEK_API_KEY` | Chave do DeepSeek conectada no app |
+| `OPENAI_API_KEY` | Chave da OpenAI conectada no app (caminho oficial do Codex) |
+| `CODEX_AUTH_JSON` | Login da assinatura ChatGPT do app, **só se não houver API key da OpenAI** (não oficial, ver acima) |
+
+O que o app não tem no aparelho fica listado como faltando. O token de renovação do
+ChatGPT gira: quando o app renova a sessão, a cópia no GitHub pode parar de
+funcionar, e é preciso configurar o repositório de novo.
+
 ## ChatGPT / Codex por assinatura
 
 O botão **Usar assinatura ChatGPT** usa o código de dispositivo oficial da
@@ -75,7 +140,7 @@ autorizar a sua própria conta GitHub pelo fluxo de dispositivo.
 
 - Use OAuth/App do GitHub com acesso somente ao repositório escolhido.
 - Prefira OAuth; se usar PAT, crie um fine-grained PAT limitado ao repositório e revogue-o ao deixar de usá-lo.
-- As chaves Gemini, DeepSeek, Anthropic e OpenAI não são enviadas ao GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
+- As chaves Gemini e Anthropic guardadas no app não saem do aparelho. As chaves do DeepSeek e da OpenAI, o token do Claude e (sem API key) o login do ChatGPT são enviados, cifrados, ao environment `agents` de cada repositório que você configurar, porque os workflows rodam no GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
 - Tokens de Claude/Codex/DeepSeek nunca entram em Issues, commits ou logs.
 - Assinaturas Claude Pro/Max e ChatGPT/Codex não são chaves de API. Claude Code e Codex por assinatura exigem os fluxos oficiais e um runtime complementar; o app não disfarça uma chave de API como assinatura.
 - Para Actions, o app deve criptografar cada secret com a chave pública do repositório antes de enviá-lo à API do GitHub.

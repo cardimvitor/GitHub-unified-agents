@@ -1,12 +1,13 @@
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SystemUI from 'expo-system-ui'
+import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { useEffect } from 'react'
 
 export default function RootLayout() {
   useEffect(() => { void SystemUI.setBackgroundColorAsync('#101827') }, [])
   return (
-    <>
+    <KeyboardProvider>
       <StatusBar style="light" />
       <Stack screenOptions={{ headerStyle: { backgroundColor: '#101827' }, headerTintColor: '#f8fafc' }}>
         <Stack.Screen name="index" options={{ title: 'Unified Agents' }} />
@@ -23,6 +24,6 @@ export default function RootLayout() {
         <Stack.Screen name="codex-guide" options={{ title: 'Codex por assinatura' }} />
         <Stack.Screen name="chat" options={{ title: 'Planejamento compartilhado' }} />
       </Stack>
-    </>
+    </KeyboardProvider>
   )
 }
