@@ -47,7 +47,8 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
     try {
       await action()
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Não foi possível concluir.')
+      console.warn('RepositoryPanel operation failed', error)
+      setStatus('Não foi possível concluir a operação. Verifique sua conexão e tente novamente.')
     } finally {
       setBusy(false)
     }

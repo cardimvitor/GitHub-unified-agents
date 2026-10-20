@@ -15,9 +15,7 @@ type TokenResponse = {
 }
 
 async function githubError(response: Response, fallback: string): Promise<Error> {
-  const payload = await response.json().catch(() => null) as { error?: string; error_description?: string } | null
-  const detail = payload?.error_description ?? payload?.error
-  return new Error(detail ? `${fallback} (${detail}).` : `${fallback} (${response.status}).`)
+  return new Error(`${fallback} (${response.status}).`)
 }
 
 function clientId(): string {

@@ -50,6 +50,10 @@ export default function ConnectGitHubScreen() {
       setMessage('Cole um fine-grained PAT para continuar.')
       return
     }
+    if (!candidate.startsWith('github_pat_')) {
+      setMessage('Use um fine-grained PAT. Ele deve começar com github_pat_.')
+      return
+    }
     setBusy(true)
     try {
       const user = await getAuthenticatedGitHubUser(candidate)
@@ -57,7 +61,7 @@ export default function ConnectGitHubScreen() {
       setPat('')
       setMessage(`GitHub conectado como ${user.login}. O PAT foi guardado somente no cofre do dispositivo.`)
     } catch {
-      setMessage('O PAT foi recusado. Use um fine-grained PAT com acesso ao repositório escolhido.')
+      setMessage('O PAT foi recusado. Verifique se o token é fine-grained, com permissões adequadas e expiração curta.')
     } finally {
       setBusy(false)
     }
@@ -85,7 +89,7 @@ export default function ConnectGitHubScreen() {
           <Pressable disabled={busy} onPress={() => void connectPat()} style={[styles.button, busy && styles.disabled]}>
             {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Validar e guardar PAT</Text>}
           </Pressable>
-          <Text style={styles.note}>Use apenas fine-grained PAT, limitado ao repositório desejado. Este é um fallback; prefira Login GitHub.</Text>
+          <Text style={styles.note}>Use apenas fine-grained PAT, que começa com github_pat_, limitado ao repositório desejado. Este é um fallback; prefira Login GitHub.</Text>
         </>
       )}
     </View>
