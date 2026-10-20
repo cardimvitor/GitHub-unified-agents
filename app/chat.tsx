@@ -1,11 +1,40 @@
 import { useFocusEffect } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { createIssue } from '@/github/repository'
 import { askProvider, connectedTargets, modelsFor, setModelFor, type ChatTarget } from '@/providers/chat'
+import { githubSession } from '@/storage/github-session'
+import { githubTarget } from '@/storage/github-target'
+import { RepositoryPanel } from '@/components/repository-panel'
 
-type Entry = { author: string; text: string }
+type Entry = { author: string; text: string; plan?: boolean; created?: boolean }
 type Connected = { id: ChatTarget; label: string }
+type Executor = 'claude' | 'codex' | 'deepseek'
 type ModelState = { models: string[]; selected: string | null; active: string }
+
+// Instrução do modo planejamento: produz um plano revisável, sem executar nada.
+const PLANNING_INSTRUCTION = [
+  'Modo planejamento: não escreva código nem execute nada.',
+  'Responda em português com:',
+  '1) Objetivo em uma frase;',
+  '2) Passos numerados, cada um com o arquivo ou área afetada;',
+  '3) Riscos e perguntas em aberto.',
+  'Termine com a linha "Pronto para executar." quando o plano estiver completo.'
+].join('\n')
+
+// Agentes que executam o plano no GitHub Actions. Cada um tem um workflow que reage à menção.
+const EXECUTORS: Array<{ id: Executor; label: string; mention: string }> = [
+  { id: 'claude', label: 'Claude', mention: '@claude' },
+  { id: 'codex', label: 'Codex', mention: '@codex' },
+  { id: 'deepseek', label: 'DeepSeek', mention: '@deepseek' }
+]
+
+function titleFrom(plan: string) {
+  const line = plan.split('\n').map((item) => item.replace(/[#*`]/g, '').trim()).find(Boolean) ?? 'Tarefa do planejamento'
+  return line.slice(0, 120)
+}
 
 export default function SharedChatScreen() {
   const [connected, setConnected] = useState<Connected[]>([])
@@ -15,12 +44,20 @@ export default function SharedChatScreen() {
   const [prompt, setPrompt] = useState('')
   const [entries, setEntries] = useState<Entry[]>([])
   const [busy, setBusy] = useState(false)
+  const [planning, setPlanning] = useState(true)
+  const [repository, setRepository] = useState('')
+  const [executor, setExecutor] = useState<Executor>('claude')
+  const [githubConnected, setGithubConnected] = useState(false)
+  const insets = useSafeAreaInsets()
+  const messagesRef = useRef<ScrollView>(null)
 
   useFocusEffect(useCallback(() => {
     void connectedTargets().then((list) => {
       setConnected(list)
       setTarget((current) => (current && list.some((item) => item.id === current) ? current : list[0]?.id ?? null))
     })
+    void githubTarget.read().then(setRepository)
+    void githubSession.read().then((token) => setGithubConnected(Boolean(token)))
   }, []))
 
   useEffect(() => {
@@ -35,6 +72,8 @@ export default function SharedChatScreen() {
   }, [target])
 
   const targetLabel = connected.find((item) => item.id === target)?.label ?? ''
+  const repoParts = repository.trim().split('/')
+  const validRepo = repoParts.length === 2 && repoParts.every(Boolean)
 
   async function chooseModel(model: string | null) {
     if (!target) return
@@ -52,10 +91,29 @@ export default function SharedChatScreen() {
       const transcript = [...entries, { author: 'Você', text: question }]
         .map((entry) => `${entry.author}: ${entry.text}`)
         .join('\n\n')
-      const answer = await askProvider(target, `Responda em português, quando apropriado. Conversa compartilhada:\n\n${transcript}`)
-      setEntries((current) => [...current, { author: `${targetLabel} · ${answer.model}`, text: answer.text }])
+      const instruction = planning ? `${PLANNING_INSTRUCTION}\n\n` : 'Responda em português, quando apropriado.\n\n'
+      const answer = await askProvider(target, `${instruction}Conversa compartilhada:\n\n${transcript}`)
+      const served = answer.model === answer.requested ? answer.model : `${answer.model} (pedido: ${answer.requested})`
+      setEntries((current) => [...current, { author: `${targetLabel} · ${served}`, text: answer.text, plan: planning }])
     } catch (error) {
       setEntries((current) => [...current, { author: targetLabel || 'Erro', text: error instanceof Error ? error.message : 'Não foi possível obter resposta.' }])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function createIssueFrom(index: number) {
+    const plan = entries[index]
+    const token = await githubSession.read()
+    if (!token || !validRepo) return
+    const [owner, name] = repoParts
+    setBusy(true)
+    try {
+      const mention = EXECUTORS.find((item) => item.id === executor)?.mention ?? '@claude'
+      const issue = await createIssue(token, owner, name, titleFrom(plan.text), `${plan.text}\n\n---\n${mention} execute o plano acima neste repositório e abra um pull request.`)
+      setEntries((current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issue criada: ${issue.html_url}\n${mention} vai executar o plano pelo GitHub Actions.` }))
+    } catch (error) {
+      setEntries((current) => [...current, { author: 'GitHub', text: error instanceof Error ? error.message : 'Não foi possível criar a Issue.' }])
     } finally {
       setBusy(false)
     }
@@ -67,15 +125,26 @@ export default function SharedChatScreen() {
     </View>
   }
 
-  return <View style={styles.page}>
+  return <KeyboardAvoidingView style={styles.page} behavior="padding">
     <View style={styles.providers}>
       {connected.map((item) => <Pressable key={item.id} onPress={() => setTarget(item.id)} style={[styles.chip, target === item.id && styles.chipSelected]}>
         <Text style={[styles.chipText, target === item.id && styles.chipTextSelected]}>{item.label}</Text>
       </Pressable>)}
+      <Pressable onPress={() => setPlanning((current) => !current)} style={[styles.chip, planning && styles.chipSelected]}>
+        <Text style={[styles.chipText, planning && styles.chipTextSelected]}>Planejamento {planning ? 'ligado' : 'desligado'}</Text>
+      </Pressable>
     </View>
 
+    {planning ? <View style={styles.providers}>
+      {EXECUTORS.map((item) => <Pressable key={item.id} onPress={() => setExecutor(item.id)} style={[styles.chip, executor === item.id && styles.chipSelected]}>
+        <Text style={[styles.chipText, executor === item.id && styles.chipTextSelected]}>Executar com {item.label}</Text>
+      </Pressable>)}
+    </View> : null}
+
+    {planning ? <RepositoryPanel repository={repository} githubConnected={githubConnected} onChange={setRepository} /> : null}
+
     <Text style={styles.modelHint}>{modelsError ?? (modelState ? 'Modelos disponíveis. Toque para usar na próxima mensagem.' : 'Carregando modelos…')}</Text>
-    {modelState ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modelRow}>
+    {modelState ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modelScroll} contentContainerStyle={styles.modelRow}>
       <Pressable onPress={() => void chooseModel(null)} style={[styles.modelChip, !modelState.selected && styles.chipSelected]}>
         <Text style={[styles.chipText, !modelState.selected && styles.chipTextSelected]}>Automático</Text>
       </Pressable>
@@ -84,20 +153,23 @@ export default function SharedChatScreen() {
       </Pressable>)}
     </ScrollView> : null}
 
-    <ScrollView style={styles.messages} contentContainerStyle={styles.messagesContent}>
-      {entries.length === 0 ? <Text style={styles.empty}>Descreva a tarefa para planejar. O histórico fica só nesta tela e some ao sair.</Text> : entries.map((entry, index) => <View key={`${entry.author}-${index}`} style={styles.message}>
+    <ScrollView ref={messagesRef} style={styles.messages} contentContainerStyle={styles.messagesContent} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: true })}>
+      {entries.length === 0 ? <Text style={styles.empty}>{planning ? 'Descreva o que quer construir. Eu respondo com um plano que você pode transformar em Issue para o Claude Code executar.' : 'Conversa livre. O histórico fica só nesta tela e some ao sair.'}</Text> : entries.map((entry, index) => <View key={`${entry.author}-${index}`} style={styles.message}>
         <Text style={styles.author}>{entry.author}</Text>
         <Text style={styles.messageText}>{entry.text}</Text>
+        {entry.plan && !entry.created && validRepo && githubConnected ? <Pressable onPress={() => void createIssueFrom(index)} disabled={busy} style={[styles.issueButton, busy && styles.disabled]}>
+          <Text style={styles.issueButtonText}>Criar Issue com {EXECUTORS.find((item) => item.id === executor)?.mention} em {repository.trim()}</Text>
+        </Pressable> : null}
       </View>)}
     </ScrollView>
 
-    <View style={styles.composer}>
-      <TextInput value={prompt} onChangeText={setPrompt} multiline placeholder="Mensagem" placeholderTextColor="#64748b" style={styles.input} />
+    <View style={[styles.composer, { paddingBottom: insets.bottom + 4 }]}>
+      <TextInput value={prompt} onChangeText={setPrompt} multiline placeholder={planning ? 'Descreva a tarefa' : 'Mensagem'} placeholderTextColor="#64748b" style={styles.input} />
       <Pressable onPress={() => void send()} disabled={busy || !target} style={[styles.send, (busy || !target) && styles.disabled]}>
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendText}>Enviar</Text>}
       </Pressable>
     </View>
-  </View>
+  </KeyboardAvoidingView>
 }
 
 const styles = StyleSheet.create({
@@ -108,7 +180,8 @@ const styles = StyleSheet.create({
   chipText: { color: '#e2e8f0', fontSize: 12, fontWeight: '600' },
   chipTextSelected: { color: '#fff' },
   modelHint: { color: '#94a3b8', fontSize: 12 },
-  modelRow: { flexDirection: 'row', gap: 6 },
+  modelScroll: { flexGrow: 0 },
+  modelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   modelChip: { borderRadius: 14, borderWidth: 1, borderColor: '#475569', paddingHorizontal: 10, paddingVertical: 5 },
   messages: { flex: 1, backgroundColor: '#0f172a', borderRadius: 10 },
   messagesContent: { padding: 10, gap: 8 },
@@ -116,6 +189,8 @@ const styles = StyleSheet.create({
   message: { backgroundColor: '#1e293b', borderRadius: 8, padding: 10, gap: 4 },
   author: { color: '#60a5fa', fontSize: 11, fontWeight: '700' },
   messageText: { color: '#e2e8f0', lineHeight: 20, fontSize: 14 },
+  issueButton: { alignItems: 'center', backgroundColor: '#7c3aed', borderRadius: 8, paddingVertical: 8, marginTop: 6 },
+  issueButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   input: { flex: 1, minHeight: 44, maxHeight: 120, color: '#f8fafc', backgroundColor: '#1e293b', borderRadius: 10, fontSize: 15, paddingHorizontal: 12, paddingVertical: 10, textAlignVertical: 'top' },
   send: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#2563eb', borderRadius: 10, minHeight: 44, paddingHorizontal: 16 },

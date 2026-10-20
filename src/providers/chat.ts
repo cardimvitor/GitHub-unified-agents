@@ -6,7 +6,8 @@ import { listModels, type ModelTarget } from '@/providers/models'
 
 export type ChatTarget = ModelTarget
 
-export type ChatAnswer = { text: string; model: string }
+// model: modelo que a API informou ter servido a resposta; requested: modelo enviado no pedido.
+export type ChatAnswer = { text: string; model: string; requested: string }
 
 const LABELS: Record<ChatTarget, string> = {
   gemini: 'Gemini',
@@ -88,10 +89,10 @@ export async function askProvider(target: ChatTarget, prompt: string): Promise<C
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': credential.token },
       body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
     })
-    const data = await responseJson(response) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+    const data = await responseJson(response) as { modelVersion?: string; candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
     const text = textFrom(data.candidates?.[0]?.content?.parts?.[0]?.text)
     if (!text) throw new Error('Gemini não retornou texto para esta solicitação.')
-    return { text, model }
+    return { text, model: data.modelVersion || model, requested: model }
   }
 
   if (target === 'deepseek') {
@@ -100,10 +101,10 @@ export async function askProvider(target: ChatTarget, prompt: string): Promise<C
       headers: { Authorization: `Bearer ${credential.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] })
     })
-    const data = await responseJson(response) as { choices?: Array<{ message?: { content?: string } }> }
+    const data = await responseJson(response) as { model?: string; choices?: Array<{ message?: { content?: string } }> }
     const text = textFrom(data.choices?.[0]?.message?.content)
     if (!text) throw new Error('DeepSeek não retornou texto para esta solicitação.')
-    return { text, model }
+    return { text, model: data.model || model, requested: model }
   }
 
   if (target === 'claude') {
@@ -112,10 +113,10 @@ export async function askProvider(target: ChatTarget, prompt: string): Promise<C
       headers: { 'anthropic-version': '2023-06-01', 'x-api-key': credential.token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, max_tokens: 1200, messages: [{ role: 'user', content: prompt }] })
     })
-    const data = await responseJson(response) as { content?: Array<{ type?: string; text?: string }> }
+    const data = await responseJson(response) as { model?: string; content?: Array<{ type?: string; text?: string }> }
     const text = textFrom(data.content?.find((part) => part.type === 'text')?.text)
     if (!text) throw new Error('Claude não retornou texto para esta solicitação.')
-    return { text, model }
+    return { text, model: data.model || model, requested: model }
   }
 
   const response = await fetch('https://api.openai.com/v1/responses', {
@@ -123,10 +124,10 @@ export async function askProvider(target: ChatTarget, prompt: string): Promise<C
     headers: { Authorization: `Bearer ${credential.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, input: prompt })
   })
-  const data = await responseJson(response) as { output_text?: string }
+  const data = await responseJson(response) as { model?: string; output_text?: string }
   const text = textFrom(data.output_text)
   if (!text) throw new Error('OpenAI não retornou texto para esta solicitação.')
-  return { text, model }
+  return { text, model: data.model || model, requested: model }
 }
 
 // React Native não expõe response.body como stream, então lemos o corpo SSE inteiro e interpretamos depois.
@@ -156,14 +157,16 @@ async function askChatGptPlan(accessToken: string, accountId: string, model: str
     throw new Error(message)
   }
   let text = ''
+  let served = model
   for (const line of raw.split('\n')) {
     if (!line.startsWith('data:')) continue
     const payload = line.slice(5).trim()
     if (!payload || payload === '[DONE]') continue
-    const event = JSON.parse(payload) as { type?: string; delta?: string; message?: string }
+    const event = JSON.parse(payload) as { type?: string; delta?: string; message?: string; response?: { model?: string } }
+    if (event.response?.model) served = event.response.model
     if (event.type === 'response.output_text.delta') text += event.delta ?? ''
     if (event.type === 'error' || event.type === 'response.failed') throw new Error(event.message || 'ChatGPT recusou a solicitação.')
   }
   if (!text) throw new Error('ChatGPT não retornou texto para esta solicitação.')
-  return { text, model }
+  return { text, model: served, requested: model }
 }
