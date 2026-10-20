@@ -10,7 +10,7 @@ Licença: [MIT](LICENSE). O projeto é open source; contribuições seguem o
 - Login GitHub no próprio dispositivo, usando OAuth Device Flow.
 - Fallback opcional por fine-grained PAT, validado antes de ser salvo no cofre do aparelho.
 - Token armazenado em `expo-secure-store`, nunca no repositório.
-- Conexões Gemini, DeepSeek, Claude API e OpenAI API por chaves individuais, validadas e armazenadas no cofre do aparelho.
+- Conexões DeepSeek, Claude API e OpenAI API por chaves individuais, validadas e armazenadas no cofre do aparelho.
 - Chat de planejamento local: o mesmo histórico pode ser reenviado a qualquer provider conectado para comparar respostas.
 - Base para criar Issues, observar PRs e configurar GitHub Actions.
 - GitHub permanece separado dos providers: nada é publicado no repositório sem uma ação explícita posterior.
@@ -109,9 +109,9 @@ se ela não existir, usa a API key OpenAI opcional.
 ## Modelos
 
 Nenhum nome de modelo fica fixo no código. Para cada provider, o app lista os
-modelos disponíveis na própria API e usa o mais recente de texto (Gemini por
-versão e estabilidade, OpenAI e Claude pela data de criação, DeepSeek pela
-versão no nome e ChatGPT pela versão do slug). A lista é guardada por uma hora.
+modelos disponíveis na própria API e usa o mais recente de texto (OpenAI e
+Claude pela data de criação, DeepSeek pela versão no nome e ChatGPT pela versão
+do slug). A lista é guardada por uma hora.
 O nome do modelo usado aparece em cada resposta do chat.
 
 GitHub não é necessário para conversar. GitHub é usado separadamente quando o
@@ -140,7 +140,7 @@ autorizar a sua própria conta GitHub pelo fluxo de dispositivo.
 
 - Use OAuth/App do GitHub com acesso somente ao repositório escolhido.
 - Prefira OAuth; se usar PAT, crie um fine-grained PAT limitado ao repositório e revogue-o ao deixar de usá-lo.
-- As chaves Gemini e Anthropic guardadas no app não saem do aparelho. As chaves do DeepSeek e da OpenAI, o token do Claude e (sem API key) o login do ChatGPT são enviados, cifrados, ao environment `agents` de cada repositório que você configurar, porque os workflows rodam no GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
+- As chaves da Anthropic guardadas no app não saem do aparelho. As chaves do DeepSeek e da OpenAI, o token do Claude e (sem API key) o login do ChatGPT são enviados, cifrados, ao environment `agents` de cada repositório que você configurar, porque os workflows rodam no GitHub. Para distribuição multiusuário em produção, use um proxy/backend por usuário em vez de uma chave compartilhada no aplicativo.
 - Tokens de Claude/Codex/DeepSeek nunca entram em Issues, commits ou logs.
 - Assinaturas Claude Pro/Max e ChatGPT/Codex não são chaves de API. Claude Code e Codex por assinatura exigem os fluxos oficiais e um runtime complementar; o app não disfarça uma chave de API como assinatura.
 - Para Actions, o app deve criptografar cada secret com a chave pública do repositório antes de enviá-lo à API do GitHub.

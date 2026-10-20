@@ -1,7 +1,7 @@
 // Lista os modelos de texto de cada provider a partir da própria API, do mais recente para o mais antigo.
 // Nenhum nome de modelo fica fixo no código: a lista muda quando o provider lança uma versão nova.
 
-export type ModelTarget = 'gemini' | 'deepseek' | 'claude' | 'openai' | 'chatgpt'
+export type ModelTarget = 'deepseek' | 'claude' | 'openai' | 'chatgpt'
 
 const CACHE_MS = 60 * 60 * 1000
 const cache = new Map<string, { models: string[]; expires: number }>()
@@ -12,20 +12,6 @@ const NOT_CHAT = /(embedding|image|imagen|tts|audio|realtime|transcribe|whisper|
 export function numericVersion(id: string) {
   const match = id.match(/\d+(?:\.\d+)?/)
   return match ? Number(match[0]) : 0
-}
-
-// Gemini: exige generateContent. Estáveis antes de preview; dentro do grupo, versão mais alta; Pro antes de Flash; Lite por último.
-export function rankGeminiModels(models: Array<{ name?: string; supportedGenerationMethods?: string[] }>) {
-  return models
-    .filter((model) => model.name?.startsWith('models/gemini-') && model.supportedGenerationMethods?.includes('generateContent'))
-    .map((model) => model.name!.slice('models/'.length))
-    .filter((id) => !NOT_CHAT.test(id))
-    .sort((a, b) =>
-      Number(/preview|exp/.test(a)) - Number(/preview|exp/.test(b))
-      || numericVersion(b) - numericVersion(a)
-      || Number(/lite/.test(a)) - Number(/lite/.test(b))
-      || Number(/pro/.test(b)) - Number(/pro/.test(a))
-    )
 }
 
 // OpenAI API: ordena pela data de criação informada pela API.
@@ -72,10 +58,6 @@ async function listed(url: string, headers: Record<string, string>, label: strin
 }
 
 async function fetchModels(target: ModelTarget, credential: string, accountId?: string): Promise<string[]> {
-  if (target === 'gemini') {
-    const data = await listed('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', { 'x-goog-api-key': credential }, 'Gemini não listou modelos') as { models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> }
-    return rankGeminiModels(data.models ?? [])
-  }
   if (target === 'deepseek') {
     const data = await listed('https://api.deepseek.com/models', { Authorization: `Bearer ${credential}` }, 'DeepSeek não listou modelos') as { data?: Array<{ id?: string }> }
     return rankDeepSeekModels((data.data ?? []).map((item) => item.id ?? '').filter(Boolean))
