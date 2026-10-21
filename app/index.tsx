@@ -7,7 +7,6 @@ import { chatGptSession } from '@/storage/chatgpt-session'
 
 export default function HomeScreen() {
   const [connected, setConnected] = useState(false)
-  const [geminiConnected, setGeminiConnected] = useState(false)
   const [deepSeekConnected, setDeepSeekConnected] = useState(false)
   const [claudeConnected, setClaudeConnected] = useState(false)
   const [openAiConnected, setOpenAiConnected] = useState(false)
@@ -17,14 +16,12 @@ export default function HomeScreen() {
     useCallback(() => {
       void Promise.all([
         githubSession.read(),
-        providerCredentials.read('gemini'),
         providerCredentials.read('deepseek'),
         providerCredentials.read('claude'),
         providerCredentials.read('openai'),
         chatGptSession.read()
-      ]).then(([token, gemini, deepseek, claude, openai, chatgpt]) => {
+      ]).then(([token, deepseek, claude, openai, chatgpt]) => {
         setConnected(Boolean(token))
-        setGeminiConnected(Boolean(gemini))
         setDeepSeekConnected(Boolean(deepseek))
         setClaudeConnected(Boolean(claude))
         setOpenAiConnected(Boolean(openai))
@@ -61,7 +58,6 @@ export default function HomeScreen() {
         <Text style={styles.muted}>A assinatura é usada no chat; a API key é uma alternativa. Automação de repositório permanece separada no GitHub.</Text>
         <Link href="/openai" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{chatGptConnected || openAiConnected ? 'Gerenciar ChatGPT / OpenAI' : 'Ver opções'}</Text></Pressable></Link>
       </View>
-      <View style={styles.card}><Text style={styles.cardTitle}>Gemini</Text><Text style={styles.status}>{geminiConnected ? 'Conectado neste dispositivo' : 'Ainda não conectado'}</Text><Link href="/connect-gemini" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{geminiConnected ? 'Gerenciar Gemini' : 'Conectar Gemini'}</Text></Pressable></Link></View>
     </ScrollView>
   )
 }

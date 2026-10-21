@@ -11,6 +11,8 @@ on:
       - 'v*'
     branches:
       - ccr-9ccfd58b-9y5v3q
+      - main
+      - release/apk-main
 
 jobs:
   build:
@@ -38,7 +40,7 @@ jobs:
           name: unified-agents-arm64-apk
           path: android/app/build/outputs/apk/release/app-release.apk
       - name: Draft GitHub release with the APK
-        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/ccr-9ccfd58b-9y5v3q'
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/ccr-9ccfd58b-9y5v3q' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release/apk-main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.1.0' }}

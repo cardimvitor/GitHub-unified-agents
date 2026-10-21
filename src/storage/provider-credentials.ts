@@ -1,9 +1,8 @@
 import * as SecureStore from 'expo-secure-store'
 
-export type ProviderId = 'gemini' | 'deepseek' | 'claude' | 'openai'
+export type ProviderId = 'deepseek' | 'claude' | 'openai'
 
 const keys: Record<ProviderId, string> = {
-  gemini: 'provider-gemini-api-key',
   deepseek: 'provider-deepseek-api-key',
   claude: 'provider-claude-api-key',
   openai: 'provider-openai-api-key'

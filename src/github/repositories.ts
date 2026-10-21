@@ -26,7 +26,9 @@ async function api<T>(token: string, path: string, init?: RequestInit): Promise<
     const data = await response.json().catch(() => ({})) as { message?: string }
     throw new Error(data.message ? `GitHub recusou: ${data.message} (${response.status}).` : `GitHub respondeu com ${response.status}.`)
   }
-  return response.json() as Promise<T>
+  // Algumas respostas de sucesso não têm corpo (ex.: PUT de permissões responde 204).
+  const text = await response.text()
+  return (text ? JSON.parse(text) : null) as T
 }
 
 type RepoPayload = { full_name: string; private: boolean; default_branch: string }
@@ -108,3 +110,19 @@ export async function enableCopilotReview(token: string, fullName: string): Prom
     return { ok: false, message: `Não foi possível ligar a revisão do Copilot pela API: ${reason} Ative em Settings → Rules, criando um ruleset com a regra de revisão automática do Copilot.` }
   }
 }
+
+// Permite que o GitHub Actions crie e aprove PRs, para os agentes abrirem o PR no fim da execução.
+export async function allowActionsPullRequests(token: string, fullName: string): Promise<{ ok: boolean; message: string }> {
+  const [owner, repo] = fullName.split('/')
+  try {
+    await api(token, `/repos/${owner}/${repo}/actions/permissions/workflow`, {
+      method: 'PUT',
+      body: JSON.stringify({ default_workflow_permissions: 'write', can_approve_pull_request_reviews: true })
+    })
+    return { ok: true, message: 'Actions pode criar PRs.' }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'erro desconhecido'
+    return { ok: false, message: `Não foi possível liberar Actions para criar PRs: ${reason}` }
+  }
+}
+

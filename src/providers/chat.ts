@@ -10,7 +10,6 @@ export type ChatTarget = ModelTarget
 export type ChatAnswer = { text: string; model: string; requested: string }
 
 const LABELS: Record<ChatTarget, string> = {
-  gemini: 'Gemini',
   deepseek: 'DeepSeek',
   claude: 'Claude API',
   openai: 'OpenAI API',
@@ -21,8 +20,7 @@ const LABELS: Record<ChatTarget, string> = {
 const CHATGPT_CODEX_BASE = 'https://chatgpt.com/backend-api/codex'
 
 export async function connectedTargets(): Promise<Array<{ id: ChatTarget; label: string }>> {
-  const [gemini, deepseek, claude, openai, plan] = await Promise.all([
-    providerCredentials.read('gemini'),
+  const [deepseek, claude, openai, plan] = await Promise.all([
     providerCredentials.read('deepseek'),
     providerCredentials.read('claude'),
     providerCredentials.read('openai'),
@@ -30,7 +28,6 @@ export async function connectedTargets(): Promise<Array<{ id: ChatTarget; label:
   ])
   const found: Array<{ id: ChatTarget; connected: boolean }> = [
     { id: 'chatgpt', connected: Boolean(plan) },
-    { id: 'gemini', connected: Boolean(gemini) },
     { id: 'deepseek', connected: Boolean(deepseek) },
     { id: 'claude', connected: Boolean(claude) },
     { id: 'openai', connected: Boolean(openai) }
@@ -82,18 +79,6 @@ export async function askProvider(target: ChatTarget, prompt: string): Promise<C
   const { active: model } = await modelsFor(target)
 
   if (target === 'chatgpt') return askChatGptPlan(credential.token, credential.accountId ?? '', model, prompt)
-
-  if (target === 'gemini') {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': credential.token },
-      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
-    })
-    const data = await responseJson(response) as { modelVersion?: string; candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
-    const text = textFrom(data.candidates?.[0]?.content?.parts?.[0]?.text)
-    if (!text) throw new Error('Gemini não retornou texto para esta solicitação.')
-    return { text, model: data.modelVersion || model, requested: model }
-  }
 
   if (target === 'deepseek') {
     const response = await fetch('https://api.deepseek.com/chat/completions', {
