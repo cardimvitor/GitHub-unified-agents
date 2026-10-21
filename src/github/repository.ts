@@ -18,6 +18,9 @@ async function request<T>(token: string, path: string, init?: RequestInit): Prom
       ...(init?.headers ?? {})
     }
   })
+  if (response.status === 410 && path.endsWith('/issues')) {
+    throw new Error('O repositório não aceita Issues (GitHub respondeu 410). Ative em Settings → Features → Issues no GitHub e tente de novo.')
+  }
   if (!response.ok) throw new Error(`GitHub respondeu com ${response.status}.`)
   return response.json() as Promise<T>
 }
