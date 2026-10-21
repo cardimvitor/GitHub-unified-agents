@@ -1,8 +1,8 @@
 {
   "issue": 13,
   "agent": "deepseek",
-  "status": "pr-open",
-  "updated_at": "2026-10-21T01:04:53.715995+00:00",
-  "pr": "https://github.com/cardimvitor/GitHub-unified-agents/pull/14",
-  "explanation": "# Handoff para a Issue #13\n\n## O que mudou\n- Criado o arquivo `.agents/handoffs/test-run.md` com a linha `Test run OK`.\n\n## Por que\n- A Issue #13 solicitava a criação desse arquivo com exatamente essa linha.\n\n## O que ficou fora\n- Nada.\n\n## Como testar\n- Execute `cat .agents/handoffs/test-run.md` e confira que a saída é `Test run OK`.\n\n## Pontos de atenção\n- Nenhum."
+  "status": "in-progress",
+  "updated_at": "2026-10-21T01:05:59.615293+00:00",
+  "branch": "agent/deepseek-issue-13",
+  "started_at": "2026-10-21T01:05:59.615293+00:00"
 }
