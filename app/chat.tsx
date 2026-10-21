@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { createIssue } from '@/github/repository'
 import { bodyForExecutor } from '@/github/agents-status'
 import { askProvider, connectedTargets, modelsFor, setModelFor, type ChatTarget } from '@/providers/chat'
+import { splitPlan } from '@/providers/split-plan'
 import { githubSession } from '@/storage/github-session'
 import { githubTarget } from '@/storage/github-target'
 import { RepositoryPanel } from '@/components/repository-panel'
@@ -47,7 +48,7 @@ export default function SharedChatScreen() {
   const [busy, setBusy] = useState(false)
   const [planning, setPlanning] = useState(true)
   const [repository, setRepository] = useState('')
-  const [executor, setExecutor] = useState<Executor>('claude')
+  const [executors, setExecutors] = useState<Executor[]>(['claude'])
   const [githubConnected, setGithubConnected] = useState(false)
   const insets = useSafeAreaInsets()
   const messagesRef = useRef<ScrollView>(null)
@@ -75,6 +76,8 @@ export default function SharedChatScreen() {
   const targetLabel = connected.find((item) => item.id === target)?.label ?? ''
   const repoParts = repository.trim().split('/')
   const validRepo = repoParts.length === 2 && repoParts.every(Boolean)
+  const selectedExecutors = EXECUTORS.filter((item) => executors.includes(item.id))
+  const selectedMentions = selectedExecutors.map((item) => item.mention).join(' e ')
 
   async function chooseModel(model: string | null) {
     if (!target) return
@@ -103,18 +106,37 @@ export default function SharedChatScreen() {
     }
   }
 
-  async function createIssueFrom(index: number) {
+  // Ao menos um agente fica sempre selecionado.
+  function toggleExecutor(id: Executor) {
+    setExecutors((current) => {
+      const next = EXECUTORS.map((item) => item.id).filter((item) => (item === id ? !current.includes(item) : current.includes(item)))
+      return next.length > 0 ? next : current
+    })
+  }
+
+  // Um agente: a Issue recebe o plano inteiro. Vários: o modelo do chat divide o plano e cada agente recebe a sua parte.
+  async function createIssuesFrom(index: number) {
     const plan = entries[index]
     const token = await githubSession.read()
-    if (!token || !validRepo) return
+    if (!token || !validRepo || !target) return
     const [owner, name] = repoParts
+    const selected = selectedExecutors
+    const lines: string[] = []
     setBusy(true)
     try {
-      const mention = EXECUTORS.find((item) => item.id === executor)?.mention ?? '@claude'
-      const issue = await createIssue(token, owner, name, titleFrom(plan.text), bodyForExecutor(plan.text, mention))
-      setEntries((current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issue criada: ${issue.html_url}\n${mention} vai executar o plano pelo GitHub Actions.` }))
+      const parts = selected.length > 1
+        ? await splitPlan(plan.text, selected.map((item) => item.id), (prompt) => askProvider(target, prompt).then((answer) => answer.text))
+        : { [selected[0].id]: plan.text }
+      for (const item of selected) {
+        const part = parts[item.id]
+        const title = selected.length > 1 ? `${item.label}: ${titleFrom(part)}`.slice(0, 120) : titleFrom(part)
+        const issue = await createIssue(token, owner, name, title, bodyForExecutor(part, item.mention))
+        lines.push(`${item.mention}: ${issue.html_url}`)
+      }
+      setEntries((current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issues criadas:\n${lines.join('\n')}\nOs agentes executam pelo GitHub Actions.` }))
     } catch (error) {
-      setEntries((current) => [...current, { author: 'GitHub', text: error instanceof Error ? error.message : 'Não foi possível criar a Issue.' }])
+      const failure = error instanceof Error ? error.message : 'Não foi possível criar a Issue.'
+      setEntries((current) => [...current, { author: 'GitHub', text: lines.length > 0 ? `${lines.join('\n')}\nAs demais não foram criadas: ${failure}` : failure }])
     } finally {
       setBusy(false)
     }
@@ -137,8 +159,8 @@ export default function SharedChatScreen() {
     </View>
 
     {planning ? <View style={styles.providers}>
-      {EXECUTORS.map((item) => <Pressable key={item.id} onPress={() => setExecutor(item.id)} style={[styles.chip, executor === item.id && styles.chipSelected]}>
-        <Text style={[styles.chipText, executor === item.id && styles.chipTextSelected]}>Executar com {item.label}</Text>
+      {EXECUTORS.map((item) => <Pressable key={item.id} onPress={() => toggleExecutor(item.id)} style={[styles.chip, executors.includes(item.id) && styles.chipSelected]}>
+        <Text style={[styles.chipText, executors.includes(item.id) && styles.chipTextSelected]}>Executar com {item.label}</Text>
       </Pressable>)}
     </View> : null}
 
@@ -159,8 +181,8 @@ export default function SharedChatScreen() {
       {entries.length === 0 ? <Text style={styles.empty}>{planning ? 'Descreva o que quer construir. Eu respondo com um plano que você pode transformar em Issue para o Claude Code executar.' : 'Conversa livre. O histórico fica só nesta tela e some ao sair.'}</Text> : entries.map((entry, index) => <View key={`${entry.author}-${index}`} style={styles.message}>
         <Text style={styles.author}>{entry.author}</Text>
         <Text style={styles.messageText}>{entry.text}</Text>
-        {entry.plan && !entry.created && validRepo && githubConnected ? <Pressable onPress={() => void createIssueFrom(index)} disabled={busy} style={[styles.issueButton, busy && styles.disabled]}>
-          <Text style={styles.issueButtonText}>Criar Issue com {EXECUTORS.find((item) => item.id === executor)?.mention} em {repository.trim()}</Text>
+        {entry.plan && !entry.created && validRepo && githubConnected ? <Pressable onPress={() => void createIssuesFrom(index)} disabled={busy} style={[styles.issueButton, busy && styles.disabled]}>
+          <Text style={styles.issueButtonText}>Criar {selectedExecutors.length > 1 ? 'Issues' : 'Issue'} com {selectedMentions} em {repository.trim()}</Text>
         </Pressable> : null}
       </View>)}
     </ScrollView>
