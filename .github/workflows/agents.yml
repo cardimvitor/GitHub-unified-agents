@@ -73,7 +73,7 @@ jobs:
             exit 1
           fi
           codex login status
-          codex exec -s workspace-write -o "$RUNNER_TEMP/codex-last.md" "$(cat "$RUNNER_TEMP/prompt.md")"
+          codex exec -s danger-full-access -o "$RUNNER_TEMP/codex-last.md" "$(cat "$RUNNER_TEMP/prompt.md")"
       - name: Open draft pull request
         run: bash .github/scripts/open-agent-pr.sh codex "$RUNNER_TEMP/codex-last.md"
 
