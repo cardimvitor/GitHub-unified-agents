@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { approveRun, closeIssue, listAgentIssues, listPendingRuns, listRecentAgentRuns, runIssueAgents, type AgentIssue, type AgentRun, type PendingRun } from '@/github/agents-status'
@@ -125,10 +125,11 @@ export default function AgentsScreen() {
     {issues.map((issue) => {
       const statuses = issue.mentions.map((mention) => ({ mention, status: statusOf(issue, runs, mention) }))
       return <View key={issue.number} style={styles.card}>
-        <Text style={styles.cardTitle}>#{issue.number} {issue.title}</Text>
+        <Pressable onPress={() => router.push({ pathname: '/issue', params: { number: String(issue.number) } })}><Text style={styles.cardTitle}>#{issue.number} {issue.title}</Text></Pressable>
         <Text style={styles.meta}>{issue.mentions.join(' ')} · {issue.state === 'open' ? 'open' : 'closed'}</Text>
         {statuses.map(({ mention, status }) => <Text key={mention} style={[styles.status, { color: status.color }]}>{mention}: {status.label}</Text>)}
         <View style={styles.row}>
+          <Pressable onPress={() => router.push({ pathname: '/issue', params: { number: String(issue.number) } })} style={styles.link}><Text style={styles.linkText}>Details and reply</Text></Pressable>
           <Pressable onPress={() => void Linking.openURL(statuses[0]?.status.url ?? issue.url)} style={styles.link}><Text style={styles.linkText}>Open on GitHub</Text></Pressable>
           {issue.state === 'open' ? <Pressable onPress={() => void runAgents(issue)} disabled={busy} style={styles.runAgent}><Text style={styles.buttonText}>Run agent</Text></Pressable> : null}
           {issue.state === 'open' ? <Pressable onPress={() => void close(issue)} disabled={busy} style={styles.closeIssue}><Text style={styles.buttonText}>Close issue</Text></Pressable> : null}

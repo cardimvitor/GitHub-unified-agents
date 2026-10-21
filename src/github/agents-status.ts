@@ -78,6 +78,41 @@ export function bodyForExecutor(plan: string, mention: string) {
   return `${cleaned}\n\n---\n${mention} carry out the plan above in this repository and open a pull request.`
 }
 
+export type IssueDetail = { number: number; title: string; body: string; state: string; url: string; mentions: string[] }
+export type IssueComment = { id: number; author: string; body: string; createdAt: string }
+
+export async function getIssueDetail(token: string, fullName: string, number: number): Promise<IssueDetail> {
+  const issue = await gh<{ number: number; title: string; body: string | null; state: string; html_url: string }>(token, `/repos/${fullName}/issues/${number}`)
+  const body = issue.body ?? ''
+  return {
+    number: issue.number,
+    title: issue.title,
+    body,
+    state: issue.state,
+    url: issue.html_url,
+    mentions: AGENT_MENTIONS.filter((mention) => body.includes(mention))
+  }
+}
+
+export async function listIssueComments(token: string, fullName: string, number: number): Promise<IssueComment[]> {
+  const comments = await gh<Array<{ id: number; body: string | null; created_at: string; user: { login: string } | null }>>(
+    token, `/repos/${fullName}/issues/${number}/comments?per_page=100`
+  )
+  return comments.map((comment) => ({
+    id: comment.id,
+    author: comment.user?.login ?? 'unknown',
+    body: comment.body ?? '',
+    createdAt: comment.created_at
+  }))
+}
+
+export async function postIssueComment(token: string, fullName: string, number: number, body: string) {
+  await gh(token, `/repos/${fullName}/issues/${number}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body })
+  })
+}
+
 // Roda os agentes de uma Issue de novo: um comentário com o texto da Issue dispara os workflows (issue_comment).
 export async function runIssueAgents(token: string, fullName: string, number: number) {
   const issue = await gh<{ body: string | null }>(token, `/repos/${fullName}/issues/${number}`)
