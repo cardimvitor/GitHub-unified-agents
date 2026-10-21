@@ -26,7 +26,9 @@ async function api<T>(token: string, path: string, init?: RequestInit): Promise<
     const data = await response.json().catch(() => ({})) as { message?: string }
     throw new Error(data.message ? `GitHub recusou: ${data.message} (${response.status}).` : `GitHub respondeu com ${response.status}.`)
   }
-  return response.json() as Promise<T>
+  // Algumas respostas de sucesso não têm corpo (ex.: PUT de permissões responde 204).
+  const text = await response.text()
+  return (text ? JSON.parse(text) : null) as T
 }
 
 type RepoPayload = { full_name: string; private: boolean; default_branch: string }
