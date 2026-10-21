@@ -1,8 +1,8 @@
 {
   "issue": 13,
   "agent": "deepseek",
-  "status": "in-progress",
-  "updated_at": "2026-10-21T01:09:13.266208+00:00",
-  "branch": "agent/deepseek-issue-13",
-  "started_at": "2026-10-21T01:09:13.266208+00:00"
+  "status": "pr-open",
+  "updated_at": "2026-10-21T01:10:15.456968+00:00",
+  "pr": "https://github.com/cardimvitor/GitHub-unified-agents/pull/14",
+  "explanation": "# Issue #13 - Handoff\n\n## O que mudou\n- Criado `.agents/handoffs/test-run.md` com uma linha: `Test run OK`.\n\n## Por que\n- A Issue #13 solicitou somente a criação desse arquivo de teste. Nenhuma outra alteração era necessária.\n\n## O que ficou fora\n- Nada. A Issue pedia apenas esse arquivo.\n\n## Como testar\n- Verificar que o arquivo `.agents/handoffs/test-run.md` existe e contém exatamente uma linha: `Test run OK`.\n\n## Pontos de atenção\n- Nenhuma mudança de código; apenas criação de arquivo de markdown.\n- PR em rascunho, sem merge."
 }
