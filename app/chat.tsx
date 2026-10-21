@@ -1,18 +1,18 @@
 import { Link, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
+import { KeyboardStickyView } from 'react-native-keyboard-controller'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { createIssue } from '@/github/repository'
 import { bodyForExecutor } from '@/github/agents-status'
 import { askProvider, connectedTargets, modelsFor, setModelFor, type ChatTarget } from '@/providers/chat'
-import { splitPlan } from '@/providers/split-plan'
+import { extractSplit, splitInstruction, splitPlan } from '@/providers/split-plan'
 import { githubSession } from '@/storage/github-session'
 import { githubTarget } from '@/storage/github-target'
 import { loadChatHistory, newChat, saveChatHistory, titleFor, type ChatHistory } from '@/storage/chat-history'
 import { RepositoryPanel } from '@/components/repository-panel'
 
-type Entry = { author: string; text: string; plan?: boolean; created?: boolean }
+type Entry = { author: string; text: string; plan?: boolean; created?: boolean; parts?: Record<string, string> }
 type Connected = { id: ChatTarget; label: string }
 type Executor = 'claude' | 'codex' | 'deepseek'
 type ModelState = { models: string[]; selected: string | null; active: string }
@@ -47,6 +47,7 @@ export default function SharedChatScreen() {
   const [prompt, setPrompt] = useState('')
   const [history, setHistory] = useState<ChatHistory>({ chats: [], activeId: null })
   const [showChats, setShowChats] = useState(false)
+  const [setupOpen, setSetupOpen] = useState(true)
   const loadedRepo = useRef<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [planning, setPlanning] = useState(true)
@@ -155,17 +156,21 @@ export default function SharedChatScreen() {
     const question = prompt.trim()
     if (!question || busy || !target || !active) return
     const chatId = active.id
+    const agentIds = selectedExecutors.map((item) => item.id)
     setPrompt('')
+    setSetupOpen(false)
     updateChat(chatId, (current) => [...current, { author: 'You', text: question }])
     setBusy(true)
     try {
       const transcript = [...entries, { author: 'You', text: question }]
         .map((entry) => `${entry.author}: ${entry.text}`)
         .join('\n\n')
-      const instruction = planning ? `${PLANNING_INSTRUCTION}\n\n` : 'Answer in English, when appropriate.\n\n'
+      const split = planning && agentIds.length > 1 ? `\n${splitInstruction(agentIds)}` : ''
+      const instruction = planning ? `${PLANNING_INSTRUCTION}${split}\n\n` : 'Answer in English, when appropriate.\n\n'
       const answer = await askProvider(target, `${instruction}Conversa compartilhada:\n\n${transcript}`)
       const served = answer.model === answer.requested ? answer.model : `${answer.model} (pedido: ${answer.requested})`
-      updateChat(chatId, (current) => [...current, { author: `${targetLabel} · ${served}`, text: answer.text, plan: planning }])
+      const { plan, parts } = planning ? extractSplit(answer.text, agentIds) : { plan: answer.text, parts: undefined }
+      updateChat(chatId, (current) => [...current, { author: `${targetLabel} · ${served}`, text: plan, plan: planning, parts }])
     } catch (error) {
       updateChat(chatId, (current) => [...current, { author: targetLabel || 'Error', text: error instanceof Error ? error.message : 'Could not get a response.' }])
     } finally {
@@ -193,8 +198,9 @@ export default function SharedChatScreen() {
     const lines: string[] = []
     setBusy(true)
     try {
+      const ready = plan.parts && selected.every((item) => plan.parts?.[item.id])
       const parts = selected.length > 1
-        ? await splitPlan(plan.text, selected.map((item) => item.id), (prompt) => askProvider(target, prompt).then((answer) => answer.text))
+        ? ready ? plan.parts! : await splitPlan(plan.text, selected.map((item) => item.id), (prompt) => askProvider(target, prompt).then((answer) => answer.text))
         : { [selected[0].id]: plan.text }
       for (const item of selected) {
         const part = parts[item.id]
@@ -217,25 +223,13 @@ export default function SharedChatScreen() {
     </View>
   }
 
-  return <KeyboardAvoidingView style={styles.page} behavior="padding">
-    <View style={styles.providers}>
-      {connected.map((item) => <Pressable key={item.id} onPress={() => setTarget(item.id)} style={[styles.chip, target === item.id && styles.chipSelected]}>
-        <Text style={[styles.chipText, target === item.id && styles.chipTextSelected]}>{item.label}</Text>
-      </Pressable>)}
-      <Pressable onPress={() => setPlanning((current) => !current)} style={[styles.chip, planning && styles.chipSelected]}>
-        <Text style={[styles.chipText, planning && styles.chipTextSelected]}>Planning {planning ? 'on' : 'off'}</Text>
-      </Pressable>
-    </View>
-
-    {planning ? <View style={styles.providers}>
-      {EXECUTORS.map((item) => <Pressable key={item.id} onPress={() => toggleExecutor(item.id)} style={[styles.chip, executors.includes(item.id) && styles.chipSelected]}>
-        <Text style={[styles.chipText, executors.includes(item.id) && styles.chipTextSelected]}>Run with {item.label}</Text>
-      </Pressable>)}
-    </View> : null}
-
+  return <View style={styles.page}>
     <View style={styles.chatBar}>
       <Pressable onPress={() => setShowChats((value) => !value)} style={styles.chatTitle}>
         <Text numberOfLines={1} style={styles.chatTitleText}>{active?.title ?? 'New chat'} ▾</Text>
+      </Pressable>
+      <Pressable onPress={() => setSetupOpen((value) => !value)} style={styles.chatSetup}>
+        <Text style={styles.buttonText}>{setupOpen ? 'Hide setup' : 'Setup'}</Text>
       </Pressable>
       <Pressable onPress={newConversation} style={styles.chatNew}>
         <Text style={styles.buttonText}>New chat</Text>
@@ -253,17 +247,23 @@ export default function SharedChatScreen() {
       </View>)}
     </ScrollView> : null}
 
-    <Link href="/agents" style={styles.agentsLink}>Issues and agents</Link>
-    {planning ? <RepositoryPanel repository={repository} githubConnected={githubConnected} onChange={setRepository} /> : null}
-
-    <Text style={styles.modelHint}>{modelsError ?? (modelState ? 'Models available. Tap one to use it for the next message.' : 'Loading models…')}</Text>
-    {modelState ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modelScroll} contentContainerStyle={styles.modelRow}>
-      <Pressable onPress={() => void chooseModel(null)} style={[styles.modelChip, !modelState.selected && styles.chipSelected]}>
-        <Text style={[styles.chipText, !modelState.selected && styles.chipTextSelected]}>Automatic</Text>
-      </Pressable>
-      {modelState.models.map((model) => <Pressable key={model} onPress={() => void chooseModel(model)} style={[styles.modelChip, modelState.selected === model && styles.chipSelected]}>
-        <Text style={[styles.chipText, modelState.selected === model && styles.chipTextSelected]}>{model}</Text>
+    {setupOpen ? <ScrollView style={styles.setup} nestedScrollEnabled>
+      <View style={styles.providers}>
+      {connected.map((item) => <Pressable key={item.id} onPress={() => setTarget(item.id)} style={[styles.chip, target === item.id && styles.chipSelected]}>
+        <Text style={[styles.chipText, target === item.id && styles.chipTextSelected]}>{item.label}</Text>
       </Pressable>)}
+      <Pressable onPress={() => setPlanning((current) => !current)} style={[styles.chip, planning && styles.chipSelected]}>
+        <Text style={[styles.chipText, planning && styles.chipTextSelected]}>Planning {planning ? 'on' : 'off'}</Text>
+      </Pressable>
+    </View>
+
+    {planning ? <View style={styles.providers}>
+      {EXECUTORS.map((item) => <Pressable key={item.id} onPress={() => toggleExecutor(item.id)} style={[styles.chip, executors.includes(item.id) && styles.chipSelected]}>
+        <Text style={[styles.chipText, executors.includes(item.id) && styles.chipTextSelected]}>Run with {item.label}</Text>
+      </Pressable>)}
+    </View> : null}
+
+
     </ScrollView> : null}
 
     <ScrollView ref={messagesRef} style={styles.messages} contentContainerStyle={styles.messagesContent} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: true })}>
@@ -276,13 +276,15 @@ export default function SharedChatScreen() {
       </View>)}
     </ScrollView>
 
-    <View style={[styles.composer, { paddingBottom: insets.bottom + 4 }]}>
+    <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
+      <View style={[styles.composer, { paddingBottom: insets.bottom + 4 }]}>
       <TextInput value={prompt} onChangeText={setPrompt} multiline placeholder={planning ? 'Describe the task' : 'Message'} placeholderTextColor="#64748b" style={styles.input} />
       <Pressable onPress={() => void send()} disabled={busy || !target} style={[styles.send, (busy || !target) && styles.disabled]}>
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendText}>Send</Text>}
       </Pressable>
-    </View>
-  </KeyboardAvoidingView>
+      </View>
+    </KeyboardStickyView>
+  </View>
 }
 
 const styles = StyleSheet.create({
@@ -314,6 +316,8 @@ const styles = StyleSheet.create({
   chatTitle: { flex: 1, backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   chatTitleText: { color: '#f8fafc', fontSize: 14, fontWeight: '700' },
   chatNew: { alignItems: 'center', backgroundColor: '#2563eb', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  chatSetup: { alignItems: 'center', backgroundColor: '#334155', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  setup: { maxHeight: 340, flexGrow: 0 },
   chatList: { maxHeight: 260, backgroundColor: '#0f172a', borderRadius: 10 },
   chatRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8, paddingVertical: 6 },
   chatItem: { flex: 1, gap: 2 },

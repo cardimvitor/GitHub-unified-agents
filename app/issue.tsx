@@ -1,7 +1,7 @@
 import { useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
+import { KeyboardStickyView } from 'react-native-keyboard-controller'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { getIssueDetail, listIssueComments, postIssueComment, type IssueComment, type IssueDetail } from '@/github/agents-status'
 import { githubSession } from '@/storage/github-session'
@@ -70,7 +70,7 @@ export default function IssueScreen() {
     </View>
   }
 
-  return <KeyboardAvoidingView style={styles.page} behavior="padding">
+  return <View style={styles.page}>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <Text style={styles.title}>#{issue.number} {issue.title}</Text>
       <Text style={styles.meta}>{issue.state === 'open' ? 'open' : 'closed'}{issue.mentions.length ? ` · ${issue.mentions.join(' ')}` : ''}</Text>
@@ -90,6 +90,7 @@ export default function IssueScreen() {
       <Pressable onPress={() => void Linking.openURL(issue.url)} style={styles.link}><Text style={styles.linkText}>Open on GitHub</Text></Pressable>
     </ScrollView>
 
+    <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
     <View style={[styles.composer, { paddingBottom: insets.bottom + 12 }]}>
       {agentMention ? <Pressable onPress={() => setMentionAgent((value) => !value)} style={[styles.toggle, mentionAgent && styles.toggleOn]}>
         <Text style={styles.buttonText}>{mentionAgent ? `Sends to ${agentMention}` : `Send without ${agentMention}`}</Text>
@@ -99,7 +100,8 @@ export default function IssueScreen() {
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send reply</Text>}
       </Pressable>
     </View>
-  </KeyboardAvoidingView>
+    </KeyboardStickyView>
+  </View>
 }
 
 const styles = StyleSheet.create({
