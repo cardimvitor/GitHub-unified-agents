@@ -1,6 +1,6 @@
 function messageFor(status: number) {
-  if (status === 401 || status === 403) return 'A chave DeepSeek foi recusada. Confira a chave e as permissões.'
-  return `DeepSeek não respondeu à validação (HTTP ${status}). Tente novamente.`
+  if (status === 401 || status === 403) return 'The DeepSeek key was rejected. Check the key and its permissions.'
+  return `DeepSeek did not respond to validation (HTTP ${status}). Try again.`
 }
 
 export async function validateDeepSeekApiKey(apiKey: string) {

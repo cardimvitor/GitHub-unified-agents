@@ -31,7 +31,7 @@ async function push(token: string, repositoryId: number, name: string, value: st
     await setEnvironmentSecret(token, repositoryId, AGENTS_ENVIRONMENT, name, value)
     return { name, ok: true, detail: 'enviado' }
   } catch (error) {
-    return { name, ok: false, detail: error instanceof Error ? error.message : 'erro ao enviar' }
+    return { name, ok: false, detail: error instanceof Error ? error.message : 'failed to send' }
   }
 }
 
@@ -46,7 +46,7 @@ export async function pushAgentSecrets(token: string, repositoryId: number): Pro
   ])
 
   if (claude) reports.push(await push(token, repositoryId, 'CLAUDE_CODE_OAUTH_TOKEN', claude))
-  else reports.push({ name: 'CLAUDE_CODE_OAUTH_TOKEN', ok: false, detail: 'o app ainda não tem o token do Claude' })
+  else reports.push({ name: 'CLAUDE_CODE_OAUTH_TOKEN', ok: false, detail: 'the app does not have the Claude token yet' })
 
   if (deepseek) reports.push(await push(token, repositoryId, 'DEEPSEEK_API_KEY', deepseek))
   else reports.push({ name: 'DEEPSEEK_API_KEY', ok: false, detail: 'conecte o DeepSeek no app' })
@@ -56,10 +56,10 @@ export async function pushAgentSecrets(token: string, repositoryId: number): Pro
   else if (stored) {
     try {
       const session = await currentChatGptSession(stored)
-      if (!session.refreshToken) reports.push({ name: 'CODEX_AUTH_JSON', ok: false, detail: 'a sessão ChatGPT não tem token de renovação' })
+      if (!session.refreshToken) reports.push({ name: 'CODEX_AUTH_JSON', ok: false, detail: 'the ChatGPT session has no refresh token' })
       else reports.push(await push(token, repositoryId, 'CODEX_AUTH_JSON', buildCodexAuthJson(session)))
     } catch (error) {
-      reports.push({ name: 'CODEX_AUTH_JSON', ok: false, detail: error instanceof Error ? error.message : 'sessão ChatGPT inválida' })
+      reports.push({ name: 'CODEX_AUTH_JSON', ok: false, detail: error instanceof Error ? error.message : 'invalid ChatGPT session' })
     }
   } else reports.push({ name: 'OPENAI_API_KEY', ok: false, detail: 'conecte o ChatGPT ou a OpenAI API no app' })
 

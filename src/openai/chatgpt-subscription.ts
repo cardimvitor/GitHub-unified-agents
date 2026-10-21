@@ -55,10 +55,10 @@ export async function beginChatGptDeviceLogin(): Promise<ChatGptDeviceLogin> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ client_id: CHATGPT_CLIENT_ID })
   })
-  const data = await readJson(response, 'Não foi possível iniciar o login ChatGPT')
+  const data = await readJson(response, 'Could not start ChatGPT login')
   const userCode = (data.user_code ?? data.usercode) as string | undefined
   const deviceAuthId = data.device_auth_id as string | undefined
-  if (!deviceAuthId || !userCode) throw new Error('ChatGPT não retornou o código de login.')
+  if (!deviceAuthId || !userCode) throw new Error('ChatGPT did not return a login code.')
   return {
     deviceAuthId,
     userCode,
@@ -77,7 +77,7 @@ export async function pollChatGptDeviceLogin(login: ChatGptDeviceLogin): Promise
   })
   if (response.status === 403 || response.status === 404) return null
   const grant = await readJson(response, 'O login ChatGPT foi recusado') as { authorization_code?: string; code_verifier?: string }
-  if (!grant.authorization_code || !grant.code_verifier) throw new Error('ChatGPT não retornou a autorização.')
+  if (!grant.authorization_code || !grant.code_verifier) throw new Error('ChatGPT did not return an authorization.')
 
   const tokenResponse = await fetch(TOKEN_URL, {
     method: 'POST',
@@ -92,12 +92,12 @@ export async function pollChatGptDeviceLogin(login: ChatGptDeviceLogin): Promise
   })
   const tokens = await tokenResponse.json().catch(() => ({})) as TokenResponse
   if (!tokenResponse.ok || !tokens.access_token || !tokens.id_token) {
-    throw new Error(tokens.error_description || 'ChatGPT não aceitou a autorização.')
+    throw new Error(tokens.error_description || 'ChatGPT did not accept the authorization.')
   }
 
   // Sem nonce: o login por dispositivo não envia um. A assinatura, emissor, público e validade são verificados.
   const identity = await ChatGptAuth.verifyIdentity(tokens.id_token, CHATGPT_CLIENT_ID, null)
-  if (!identity.accountId) throw new Error('A conta ChatGPT não informou o identificador de workspace.')
+  if (!identity.accountId) throw new Error('The ChatGPT account did not provide a workspace identifier.')
   const session: ChatGptPlanSession = {
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token,
@@ -137,12 +137,12 @@ export async function currentChatGptSession(session: ChatGptPlanSession): Promis
   // Sessões salvas por versões anteriores do app não têm accountId nem o client oficial: precisam ser refeitas.
   if (!session.accountId || session.clientId !== CHATGPT_CLIENT_ID) {
     await chatGptSession.clear()
-    throw new Error('Esta conexão ChatGPT foi feita por uma versão anterior. Conecte sua conta novamente.')
+    throw new Error('This ChatGPT connection was made by an older version. Connect your account again.')
   }
   if (!session.expiresAt || session.expiresAt - Date.now() > REFRESH_MARGIN_MS) return session
   if (!session.refreshToken) {
     await chatGptSession.clear()
-    throw new Error('A sessão ChatGPT expirou. Conecte sua conta novamente.')
+    throw new Error('The ChatGPT session expired. Connect your account again.')
   }
   const response = await fetch(TOKEN_URL, {
     method: 'POST',
@@ -157,7 +157,7 @@ export async function currentChatGptSession(session: ChatGptPlanSession): Promis
   const data = await response.json().catch(() => ({})) as TokenResponse
   if (!response.ok || !data.access_token) {
     await chatGptSession.clear()
-    throw new Error(data.error_description || 'A sessão ChatGPT expirou. Conecte sua conta novamente.')
+    throw new Error(data.error_description || 'The ChatGPT session expired. Connect your account again.')
   }
   const refreshed: ChatGptPlanSession = {
     ...session,

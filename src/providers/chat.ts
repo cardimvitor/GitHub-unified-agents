@@ -51,12 +51,12 @@ export function setModelFor(target: ChatTarget, model: string | null) {
 async function credentialFor(target: ChatTarget): Promise<{ token: string; accountId?: string }> {
   if (target === 'chatgpt') {
     const stored = await chatGptSession.read()
-    if (!stored) throw new Error('Conecte a assinatura ChatGPT antes de enviar uma mensagem.')
+    if (!stored) throw new Error('Connect your ChatGPT subscription before sending a message.')
     const session = await currentChatGptSession(stored)
     return { token: session.accessToken, accountId: session.accountId }
   }
   const key = await providerCredentials.read(target)
-  if (!key) throw new Error(`Conecte ${LABELS[target]} antes de enviar uma mensagem.`)
+  if (!key) throw new Error(`Connect ${LABELS[target]} before sending a message.`)
   return { token: key }
 }
 
@@ -65,7 +65,7 @@ async function responseJson(response: Response) {
   if (!response.ok) {
     const record = data as { error?: { message?: string } | string; message?: string }
     const detail = typeof record.error === 'string' ? record.error : record.error?.message || record.message
-    throw new Error(detail || `O provider retornou HTTP ${response.status}.`)
+    throw new Error(detail || `The provider returned HTTP ${response.status}.`)
   }
   return data
 }
@@ -88,7 +88,7 @@ export async function askProvider(target: ChatTarget, prompt: string): Promise<C
     })
     const data = await responseJson(response) as { model?: string; choices?: Array<{ message?: { content?: string } }> }
     const text = textFrom(data.choices?.[0]?.message?.content)
-    if (!text) throw new Error('DeepSeek não retornou texto para esta solicitação.')
+    if (!text) throw new Error('DeepSeek returned no text for this request.')
     return { text, model: data.model || model, requested: model }
   }
 
@@ -100,7 +100,7 @@ export async function askProvider(target: ChatTarget, prompt: string): Promise<C
     })
     const data = await responseJson(response) as { model?: string; content?: Array<{ type?: string; text?: string }> }
     const text = textFrom(data.content?.find((part) => part.type === 'text')?.text)
-    if (!text) throw new Error('Claude não retornou texto para esta solicitação.')
+    if (!text) throw new Error('Claude returned no text for this request.')
     return { text, model: data.model || model, requested: model }
   }
 
@@ -111,7 +111,7 @@ export async function askProvider(target: ChatTarget, prompt: string): Promise<C
   })
   const data = await responseJson(response) as { model?: string; output_text?: string }
   const text = textFrom(data.output_text)
-  if (!text) throw new Error('OpenAI não retornou texto para esta solicitação.')
+  if (!text) throw new Error('OpenAI returned no text for this request.')
   return { text, model: data.model || model, requested: model }
 }
 
@@ -123,7 +123,7 @@ async function askChatGptPlan(accessToken: string, accountId: string, model: str
     headers: { Authorization: `Bearer ${accessToken}`, 'ChatGPT-Account-ID': accountId, 'Content-Type': 'application/json', Accept: 'text/event-stream' },
     body: JSON.stringify({
       model,
-      instructions: 'Você ajuda a planejar tarefas de desenvolvimento. Responda em português, de forma objetiva.',
+      instructions: 'You help plan development tasks. Answer in English, concisely.',
       input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }],
       store: false,
       stream: true
@@ -131,7 +131,7 @@ async function askChatGptPlan(accessToken: string, accountId: string, model: str
   })
   const raw = await response.text()
   if (!response.ok) {
-    let message = `ChatGPT respondeu HTTP ${response.status}.`
+    let message = `ChatGPT responded with HTTP ${response.status}.`
     try {
       const record = JSON.parse(raw) as { error?: { message?: string } | string; detail?: string }
       const detail = typeof record.error === 'string' ? record.error : record.error?.message ?? record.detail
@@ -150,8 +150,8 @@ async function askChatGptPlan(accessToken: string, accountId: string, model: str
     const event = JSON.parse(payload) as { type?: string; delta?: string; message?: string; response?: { model?: string } }
     if (event.response?.model) served = event.response.model
     if (event.type === 'response.output_text.delta') text += event.delta ?? ''
-    if (event.type === 'error' || event.type === 'response.failed') throw new Error(event.message || 'ChatGPT recusou a solicitação.')
+    if (event.type === 'error' || event.type === 'response.failed') throw new Error(event.message || 'ChatGPT refused the request.')
   }
-  if (!text) throw new Error('ChatGPT não retornou texto para esta solicitação.')
+  if (!text) throw new Error('ChatGPT returned no text for this request.')
   return { text, model: served, requested: model }
 }

@@ -35,28 +35,28 @@ export default function HomeScreen() {
       <Text style={styles.eyebrow}>MOBILE CONTROL CENTER</Text>
       <Text style={styles.title}>GitHub Unified Agents</Text>
       <Text style={styles.copy}>
-        Conecte seus provedores de IA e converse com eles no planejamento compartilhado. A integração com Issues e pull requests ainda está em construção.
+        Connect your AI providers and chat with them in shared planning. Issue and pull request integration is still under construction.
       </Text>
-      <Link href="/chat" asChild><Pressable style={styles.chatButton}><Text style={styles.buttonText}>Abrir planejamento compartilhado</Text></Pressable></Link>
+      <Link href="/chat" asChild><Pressable style={styles.chatButton}><Text style={styles.buttonText}>Open shared planning</Text></Pressable></Link>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>GitHub</Text>
-        <Text style={styles.status}>{connected ? 'Conectado neste dispositivo' : 'Ainda não conectado'}</Text>
+        <Text style={styles.status}>{connected ? 'Connected on this device' : 'Not connected yet'}</Text>
         <Link href="/connect-github" asChild>
           <Pressable style={styles.button}>
-            <Text style={styles.buttonText}>{connected ? 'Gerenciar conexão' : 'Conectar GitHub'}</Text>
+            <Text style={styles.buttonText}>{connected ? 'Manage connection' : 'Connect GitHub'}</Text>
           </Pressable>
         </Link>
       </View>
       <Card title="DeepSeek" connected={deepSeekConnected} route="/connect-deepseek" />
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Claude</Text><Text style={styles.status}>{claudeConnected ? 'API conectada neste dispositivo' : 'Assinatura ou API'}</Text>
-        <Link href="/claude" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>Abrir Claude</Text></Pressable></Link>
+        <Text style={styles.cardTitle}>Claude</Text><Text style={styles.status}>{claudeConnected ? 'API connected on this device' : 'Subscription or API'}</Text>
+        <Link href="/claude" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>Open Claude</Text></Pressable></Link>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>ChatGPT / Codex</Text>
-        <Text style={styles.status}>{chatGptConnected ? 'Assinatura ChatGPT conectada neste dispositivo' : openAiConnected ? 'OpenAI API conectada neste dispositivo' : 'Ainda não conectado'}</Text>
-        <Text style={styles.muted}>A assinatura é usada no chat; a API key é uma alternativa. Automação de repositório permanece separada no GitHub.</Text>
-        <Link href="/openai" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{chatGptConnected || openAiConnected ? 'Gerenciar ChatGPT / OpenAI' : 'Ver opções'}</Text></Pressable></Link>
+        <Text style={styles.status}>{chatGptConnected ? 'ChatGPT subscription connected on this device' : openAiConnected ? 'OpenAI API connected on this device' : 'Not connected yet'}</Text>
+        <Text style={styles.muted}>The subscription is used in chat; an API key is an alternative. Repository automation stays separate on GitHub.</Text>
+        <Link href="/openai" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{chatGptConnected || openAiConnected ? 'Manage ChatGPT / OpenAI' : 'See options'}</Text></Pressable></Link>
       </View>
     </ScrollView>
   )
@@ -65,8 +65,8 @@ export default function HomeScreen() {
 function Card({ title, connected, route }: { title: string; connected: boolean; route: '/connect-deepseek' | '/connect-claude' }) {
   return <View style={styles.card}>
     <Text style={styles.cardTitle}>{title}</Text>
-    <Text style={styles.status}>{connected ? 'Conectado neste dispositivo' : 'Ainda não conectado'}</Text>
-    <Link href={route} asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{connected ? `Gerenciar ${title}` : `Conectar ${title}`}</Text></Pressable></Link>
+    <Text style={styles.status}>{connected ? 'Connected on this device' : 'Not connected yet'}</Text>
+    <Link href={route} asChild><Pressable style={styles.button}><Text style={styles.buttonText}>{connected ? `Manage ${title}` : `Connect ${title}`}</Text></Pressable></Link>
   </View>
 }
 

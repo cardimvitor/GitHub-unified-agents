@@ -6,30 +6,30 @@ import { providerCredentials } from '@/storage/provider-credentials'
 export default function ConnectClaudeScreen() {
   const [apiKey, setApiKey] = useState('')
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState('Conecte a Anthropic API com uma chave da Console. Claude Pro/Max não fornece uma chave de API para apps móveis.')
+  const [message, setMessage] = useState('Connect the Anthropic API with a Console key. Claude Pro/Max does not provide an API key for mobile apps.')
 
   async function connect() {
     const candidate = apiKey.trim()
-    if (!candidate) return setMessage('Cole sua chave da Anthropic para continuar.')
+    if (!candidate) return setMessage('Paste your Anthropic key to continue.')
     setBusy(true)
     try {
       await validateClaudeApiKey(candidate)
       await providerCredentials.save('claude', candidate)
       setApiKey('')
-      setMessage('Claude API conectado. A chave foi guardada somente no cofre seguro deste dispositivo.')
+      setMessage('Claude API connected. The key is stored only in this device\'s secure vault.')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Não foi possível conectar Claude API.')
+      setMessage(error instanceof Error ? error.message : 'Could not connect the Claude API.')
     } finally {
       setBusy(false)
     }
   }
 
   return <View style={styles.page}>
-    <Text style={styles.title}>Conectar Claude API</Text>
+    <Text style={styles.title}>Connect Claude API</Text>
     <Text style={styles.copy}>{message}</Text>
-    <TextInput value={apiKey} onChangeText={setApiKey} autoCapitalize="none" autoCorrect={false} secureTextEntry placeholder="Chave Anthropic" placeholderTextColor="#64748b" style={styles.input} />
-    <Pressable disabled={busy} onPress={() => void connect()} style={[styles.button, busy && styles.disabled]}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Validar e conectar</Text>}</Pressable>
-    <Text style={styles.note}>Para usar uma assinatura Claude Code, será necessário um runner separado autorizado pela sua conta; o APK não simula esse login.</Text>
+    <TextInput value={apiKey} onChangeText={setApiKey} autoCapitalize="none" autoCorrect={false} secureTextEntry placeholder="Anthropic key" placeholderTextColor="#64748b" style={styles.input} />
+    <Pressable disabled={busy} onPress={() => void connect()} style={[styles.button, busy && styles.disabled]}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Validate and connect</Text>}</Pressable>
+    <Text style={styles.note}>To use a Claude Code subscription, you need a separate runner authorized by your account; the APK does not simulate this login.</Text>
   </View>
 }
 

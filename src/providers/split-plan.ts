@@ -2,12 +2,12 @@
 
 export function splitPrompt(plan: string, agents: string[]) {
   return [
-    'Divida o plano abaixo entre os agentes indicados, sem perder nenhum passo.',
-    `Agentes: ${agents.join(', ')}.`,
-    'Cada agente recebe só os passos da sua parte, mantendo os nomes de arquivos e áreas do plano original.',
-    'Inclua em cada parte o objetivo geral em uma frase. Todo agente precisa receber pelo menos um passo.',
-    `Responda somente com JSON válido, sem texto fora dele, com exatamente estas chaves: ${agents.map((agent) => `"${agent}"`).join(', ')}.`,
-    'Plano:',
+    'Split the plan below between the listed agents, without dropping any step.',
+    `Agents: ${agents.join(', ')}.`,
+    'Each agent gets only the steps for its part, keeping the file names and areas from the original plan.',
+    'Include the overall goal in one sentence in each part. Every agent must get at least one step.',
+    `Reply only with valid JSON, with no text outside it, using exactly these keys: ${agents.map((agent) => `"${agent}"`).join(', ')}.`,
+    'Plan:',
     plan
   ].join('\n')
 }
@@ -15,17 +15,17 @@ export function splitPrompt(plan: string, agents: string[]) {
 export function parseSplit(raw: string, agents: string[]): Record<string, string> {
   const start = raw.indexOf('{')
   const end = raw.lastIndexOf('}')
-  if (start < 0 || end < start) throw new Error('A divisão não veio em JSON. Tente criar as Issues de novo.')
+  if (start < 0 || end < start) throw new Error('The split did not come back as JSON. Try creating the Issues again.')
   let data: Record<string, unknown>
   try {
     data = JSON.parse(raw.slice(start, end + 1)) as Record<string, unknown>
   } catch {
-    throw new Error('A divisão veio com JSON inválido. Tente criar as Issues de novo.')
+    throw new Error('The split came back with invalid JSON. Try creating the Issues again.')
   }
   const parts: Record<string, string> = {}
   for (const agent of agents) {
     const value = data[agent]
-    if (typeof value !== 'string' || !value.trim()) throw new Error(`A divisão não trouxe passos para ${agent}. Tente criar as Issues de novo.`)
+    if (typeof value !== 'string' || !value.trim()) throw new Error(`The split gave no steps for ${agent}. Try creating the Issues again.`)
     parts[agent] = value.trim()
   }
   return parts

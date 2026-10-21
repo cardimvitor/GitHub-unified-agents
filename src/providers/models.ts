@@ -59,19 +59,19 @@ async function listed(url: string, headers: Record<string, string>, label: strin
 
 async function fetchModels(target: ModelTarget, credential: string, accountId?: string): Promise<string[]> {
   if (target === 'deepseek') {
-    const data = await listed('https://api.deepseek.com/models', { Authorization: `Bearer ${credential}` }, 'DeepSeek não listou modelos') as { data?: Array<{ id?: string }> }
+    const data = await listed('https://api.deepseek.com/models', { Authorization: `Bearer ${credential}` }, 'DeepSeek did not list models') as { data?: Array<{ id?: string }> }
     return rankDeepSeekModels((data.data ?? []).map((item) => item.id ?? '').filter(Boolean))
   }
   if (target === 'claude') {
-    const data = await listed('https://api.anthropic.com/v1/models?limit=1000', { 'anthropic-version': '2023-06-01', 'x-api-key': credential }, 'Claude não listou modelos') as { data?: Array<{ id?: string; created_at?: string }> }
+    const data = await listed('https://api.anthropic.com/v1/models?limit=1000', { 'anthropic-version': '2023-06-01', 'x-api-key': credential }, 'Claude did not list models') as { data?: Array<{ id?: string; created_at?: string }> }
     return rankAnthropicModels(data.data ?? [])
   }
   if (target === 'chatgpt') {
     // A lista do Codex exige client_version; usamos a versão do CLI oficial que validamos.
-    const data = await listed('https://chatgpt.com/backend-api/codex/models?client_version=0.163.0', { Authorization: `Bearer ${credential}`, 'ChatGPT-Account-ID': accountId ?? '' }, 'ChatGPT não listou modelos') as { models?: Array<{ slug?: string; visibility?: string }> }
+    const data = await listed('https://chatgpt.com/backend-api/codex/models?client_version=0.163.0', { Authorization: `Bearer ${credential}`, 'ChatGPT-Account-ID': accountId ?? '' }, 'ChatGPT did not list models') as { models?: Array<{ slug?: string; visibility?: string }> }
     return rankChatGptPlanModels(data.models ?? [])
   }
-  const data = await listed('https://api.openai.com/v1/models', { Authorization: `Bearer ${credential}` }, 'OpenAI não listou modelos') as { data?: Array<{ id?: string; created?: number }> }
+  const data = await listed('https://api.openai.com/v1/models', { Authorization: `Bearer ${credential}` }, 'OpenAI did not list models') as { data?: Array<{ id?: string; created?: number }> }
   return rankOpenAiModels(data.data ?? [])
 }
 
@@ -81,7 +81,7 @@ export function listModels(target: ModelTarget, credential: string, accountId?: 
   const hit = cache.get(key)
   if (hit && hit.expires > Date.now()) return Promise.resolve(hit.models)
   return fetchModels(target, credential, accountId).then((models) => {
-    if (models.length === 0) throw new Error('Nenhum modelo de texto disponível para esta conexão.')
+    if (models.length === 0) throw new Error('No text model is available for this connection.')
     cache.set(key, { models, expires: Date.now() + CACHE_MS })
     return models
   })
