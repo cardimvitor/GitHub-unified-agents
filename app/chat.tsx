@@ -1,6 +1,6 @@
 import { Link, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { createIssue } from '@/github/repository'
@@ -9,6 +9,7 @@ import { askProvider, connectedTargets, modelsFor, setModelFor, type ChatTarget 
 import { splitPlan } from '@/providers/split-plan'
 import { githubSession } from '@/storage/github-session'
 import { githubTarget } from '@/storage/github-target'
+import { loadChatHistory, newChat, saveChatHistory, titleFor, type ChatHistory } from '@/storage/chat-history'
 import { RepositoryPanel } from '@/components/repository-panel'
 
 type Entry = { author: string; text: string; plan?: boolean; created?: boolean }
@@ -44,7 +45,9 @@ export default function SharedChatScreen() {
   const [modelState, setModelState] = useState<ModelState | null>(null)
   const [modelsError, setModelsError] = useState<string>()
   const [prompt, setPrompt] = useState('')
-  const [entries, setEntries] = useState<Entry[]>([])
+  const [history, setHistory] = useState<ChatHistory>({ chats: [], activeId: null })
+  const [showChats, setShowChats] = useState(false)
+  const loadedRepo = useRef<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [planning, setPlanning] = useState(true)
   const [repository, setRepository] = useState('')
@@ -52,6 +55,69 @@ export default function SharedChatScreen() {
   const [githubConnected, setGithubConnected] = useState(false)
   const insets = useSafeAreaInsets()
   const messagesRef = useRef<ScrollView>(null)
+  const active = history.chats.find((chat) => chat.id === history.activeId) ?? history.chats[0]
+  const entries: Entry[] = active?.entries ?? []
+
+  // Carrega as conversas do repositório escolhido. Trocar de repositório troca também a lista de conversas.
+  useEffect(() => {
+    let current = true
+    void loadChatHistory(repository).then((stored) => {
+      if (!current) return
+      const chats = stored.chats.length > 0 ? stored.chats : [newChat()]
+      const activeId = chats.some((chat) => chat.id === stored.activeId) ? stored.activeId : chats[0].id
+      loadedRepo.current = repository
+      setHistory({ chats, activeId })
+      setShowChats(false)
+    })
+    return () => { current = false }
+  }, [repository])
+
+  // Salva a cada mudança, só depois de carregar o repositório atual.
+  useEffect(() => {
+    if (loadedRepo.current === null) return
+    void saveChatHistory(loadedRepo.current, history)
+  }, [history])
+
+  // Escreve numa conversa específica, mesmo que o usuário tenha trocado de conversa enquanto a resposta chegava.
+  function updateChat(chatId: string, update: (entries: Entry[]) => Entry[]) {
+    setHistory((prev) => ({
+      ...prev,
+      chats: prev.chats.map((chat) => {
+        if (chat.id !== chatId) return chat
+        const next = update(chat.entries)
+        return { ...chat, entries: next, title: titleFor(next), updatedAt: Date.now() }
+      })
+    }))
+  }
+
+  function newConversation() {
+    const chat = newChat()
+    setHistory((prev) => ({ chats: [chat, ...prev.chats], activeId: chat.id }))
+    setShowChats(false)
+  }
+
+  function switchTo(chatId: string) {
+    setHistory((prev) => ({ ...prev, activeId: chatId }))
+    setShowChats(false)
+  }
+
+  function deleteChat(chatId: string) {
+    setHistory((prev) => {
+      const rest = prev.chats.filter((chat) => chat.id !== chatId)
+      if (rest.length === 0) {
+        const chat = newChat()
+        return { chats: [chat], activeId: chat.id }
+      }
+      return { chats: rest, activeId: prev.activeId === chatId ? rest[0].id : prev.activeId }
+    })
+  }
+
+  function confirmDelete(chat: { id: string; title: string }) {
+    Alert.alert('Delete this chat?', chat.title, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteChat(chat.id) }
+    ])
+  }
 
   useFocusEffect(useCallback(() => {
     void connectedTargets().then((list) => {
@@ -87,9 +153,10 @@ export default function SharedChatScreen() {
 
   async function send() {
     const question = prompt.trim()
-    if (!question || busy || !target) return
+    if (!question || busy || !target || !active) return
+    const chatId = active.id
     setPrompt('')
-    setEntries((current) => [...current, { author: 'You', text: question }])
+    updateChat(chatId, (current) => [...current, { author: 'You', text: question }])
     setBusy(true)
     try {
       const transcript = [...entries, { author: 'You', text: question }]
@@ -98,9 +165,9 @@ export default function SharedChatScreen() {
       const instruction = planning ? `${PLANNING_INSTRUCTION}\n\n` : 'Answer in English, when appropriate.\n\n'
       const answer = await askProvider(target, `${instruction}Conversa compartilhada:\n\n${transcript}`)
       const served = answer.model === answer.requested ? answer.model : `${answer.model} (pedido: ${answer.requested})`
-      setEntries((current) => [...current, { author: `${targetLabel} · ${served}`, text: answer.text, plan: planning }])
+      updateChat(chatId, (current) => [...current, { author: `${targetLabel} · ${served}`, text: answer.text, plan: planning }])
     } catch (error) {
-      setEntries((current) => [...current, { author: targetLabel || 'Error', text: error instanceof Error ? error.message : 'Could not get a response.' }])
+      updateChat(chatId, (current) => [...current, { author: targetLabel || 'Error', text: error instanceof Error ? error.message : 'Could not get a response.' }])
     } finally {
       setBusy(false)
     }
@@ -116,6 +183,8 @@ export default function SharedChatScreen() {
 
   // Um agente: a Issue recebe o plano inteiro. Vários: o modelo do chat divide o plano e cada agente recebe a sua parte.
   async function createIssuesFrom(index: number) {
+    if (!active) return
+    const chatId = active.id
     const plan = entries[index]
     const token = await githubSession.read()
     if (!token || !validRepo || !target) return
@@ -133,10 +202,10 @@ export default function SharedChatScreen() {
         const issue = await createIssue(token, owner, name, title, bodyForExecutor(part, item.mention))
         lines.push(`${item.mention}: ${issue.html_url}`)
       }
-      setEntries((current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issues created:\n${lines.join('\n')}\nThe agents run through GitHub Actions.` }))
+      updateChat(chatId, (current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issues created:\n${lines.join('\n')}\nThe agents run through GitHub Actions.` }))
     } catch (error) {
       const failure = error instanceof Error ? error.message : 'Could not create the Issue.'
-      setEntries((current) => [...current, { author: 'GitHub', text: lines.length > 0 ? `${lines.join('\n')}\nThe rest were not created: ${failure}` : failure }])
+      updateChat(chatId, (current) => [...current, { author: 'GitHub', text: lines.length > 0 ? `${lines.join('\n')}\nThe rest were not created: ${failure}` : failure }])
     } finally {
       setBusy(false)
     }
@@ -164,6 +233,26 @@ export default function SharedChatScreen() {
       </Pressable>)}
     </View> : null}
 
+    <View style={styles.chatBar}>
+      <Pressable onPress={() => setShowChats((value) => !value)} style={styles.chatTitle}>
+        <Text numberOfLines={1} style={styles.chatTitleText}>{active?.title ?? 'New chat'} ▾</Text>
+      </Pressable>
+      <Pressable onPress={newConversation} style={styles.chatNew}>
+        <Text style={styles.buttonText}>New chat</Text>
+      </Pressable>
+    </View>
+    {showChats ? <ScrollView style={styles.chatList} nestedScrollEnabled>
+      {[...history.chats].sort((a, b) => b.updatedAt - a.updatedAt).map((chat) => <View key={chat.id} style={styles.chatRow}>
+        <Pressable onPress={() => switchTo(chat.id)} style={styles.chatItem}>
+          <Text numberOfLines={1} style={[styles.chatItemText, chat.id === active?.id && styles.chatItemActive]}>{chat.title}</Text>
+          <Text style={styles.chatMeta}>{new Date(chat.updatedAt).toLocaleString()}</Text>
+        </Pressable>
+        <Pressable onPress={() => confirmDelete(chat)} style={styles.chatDelete}>
+          <Text style={styles.buttonText}>Delete</Text>
+        </Pressable>
+      </View>)}
+    </ScrollView> : null}
+
     <Link href="/agents" style={styles.agentsLink}>Issues and agents</Link>
     {planning ? <RepositoryPanel repository={repository} githubConnected={githubConnected} onChange={setRepository} /> : null}
 
@@ -178,7 +267,7 @@ export default function SharedChatScreen() {
     </ScrollView> : null}
 
     <ScrollView ref={messagesRef} style={styles.messages} contentContainerStyle={styles.messagesContent} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: true })}>
-      {entries.length === 0 ? <Text style={styles.empty}>{planning ? 'Describe what you want to build. I will answer with a plan you can turn into an Issue for an agent to run.' : 'Free chat. The history stays on this screen and disappears when you leave.'}</Text> : entries.map((entry, index) => <View key={`${entry.author}-${index}`} style={styles.message}>
+      {entries.length === 0 ? <Text style={styles.empty}>{planning ? 'Describe what you want to build. I will answer with a plan you can turn into an Issue for an agent to run.' : 'Free chat. Conversations are saved on this device for each repository.'}</Text> : entries.map((entry, index) => <View key={`${entry.author}-${index}`} style={styles.message}>
         <Text style={styles.author}>{entry.author}</Text>
         <Text style={styles.messageText}>{entry.text}</Text>
         {entry.plan && !entry.created && validRepo && githubConnected ? <Pressable onPress={() => void createIssuesFrom(index)} disabled={busy} style={[styles.issueButton, busy && styles.disabled]}>
@@ -220,5 +309,17 @@ const styles = StyleSheet.create({
   send: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#2563eb', borderRadius: 10, minHeight: 44, paddingHorizontal: 16 },
   sendText: { color: '#fff', fontWeight: '700' },
   disabled: { opacity: 0.6 },
-  agentsLink: { color: '#93c5fd', fontSize: 13, fontWeight: '700', paddingVertical: 4 }
+  agentsLink: { color: '#93c5fd', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
+  chatBar: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  chatTitle: { flex: 1, backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  chatTitleText: { color: '#f8fafc', fontSize: 14, fontWeight: '700' },
+  chatNew: { alignItems: 'center', backgroundColor: '#2563eb', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  chatList: { maxHeight: 260, backgroundColor: '#0f172a', borderRadius: 10 },
+  chatRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8, paddingVertical: 6 },
+  chatItem: { flex: 1, gap: 2 },
+  chatItemText: { color: '#e2e8f0', fontSize: 14, fontWeight: '600' },
+  chatItemActive: { color: '#93c5fd' },
+  chatMeta: { color: '#64748b', fontSize: 11 },
+  chatDelete: { backgroundColor: '#7f1d1d', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  buttonText: { color: '#fff', fontWeight: '700', fontSize: 13 }
 })

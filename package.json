@@ -11,6 +11,7 @@
     "gen:agent-template": "node scripts/generate-agent-template.mjs"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "blakejs": "^1.2.1",
     "expo": "^55.0.0",
     "expo-crypto": "~55.0.19",
