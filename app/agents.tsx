@@ -1,12 +1,18 @@
 import { useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { approveRun, closeIssue, listAgentIssues, listPendingRuns, listRecentAgentRuns, type AgentIssue, type AgentRun, type PendingRun } from '@/github/agents-status'
+import { approveRun, closeIssue, listAgentIssues, listPendingRuns, listRecentAgentRuns, runIssueAgents, type AgentIssue, type AgentRun, type PendingRun } from '@/github/agents-status'
 import { githubSession } from '@/storage/github-session'
 import { githubTarget } from '@/storage/github-target'
 
-function statusOf(issue: AgentIssue, runs: AgentRun[]) {
-  const run = runs.find((item) => item.title === issue.title)
+// Só conta a execução do workflow do próprio agente: @claude usa "Claude Code", @codex e @deepseek usam "Agents".
+function belongsTo(run: AgentRun, mention: string) {
+  return mention === '@claude' ? run.name === 'Claude Code' : run.name.startsWith('Agents')
+}
+
+function statusOf(issue: AgentIssue, runs: AgentRun[], mention: string) {
+  const candidates = runs.filter((item) => item.title === issue.title && belongsTo(item, mention))
+  const run = candidates.find((item) => item.conclusion !== 'skipped') ?? candidates[0]
   if (!run) return { label: 'no run yet', color: '#94a3b8', url: issue.url }
   if (run.status === 'waiting') return { label: 'waiting for your approval', color: '#fbbf24', url: run.url }
   if (run.status !== 'completed') return { label: 'in progress', color: '#60a5fa', url: run.url }
@@ -64,6 +70,21 @@ export default function AgentsScreen() {
     }
   }
 
+  async function runAgents(issue: AgentIssue) {
+    const token = await githubSession.read()
+    if (!token || !repository) return
+    setBusy(true)
+    try {
+      await runIssueAgents(token, repository, issue.number)
+      setMessage(`Run requested for #${issue.number}. It appears below in a few seconds.`)
+      setTimeout(() => void refresh(), 5000)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not start the agents.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function approve(list: PendingRun[]) {
     const token = await githubSession.read()
     if (!token || !repository) return
@@ -102,13 +123,14 @@ export default function AgentsScreen() {
     <Text style={styles.section}>Agent Issues ({issues.length})</Text>
     {issues.length === 0 ? <Text style={styles.empty}>No Issue with an agent mention.</Text> : null}
     {issues.map((issue) => {
-      const status = statusOf(issue, runs)
+      const statuses = issue.mentions.map((mention) => ({ mention, status: statusOf(issue, runs, mention) }))
       return <View key={issue.number} style={styles.card}>
         <Text style={styles.cardTitle}>#{issue.number} {issue.title}</Text>
         <Text style={styles.meta}>{issue.mentions.join(' ')} · {issue.state === 'open' ? 'open' : 'closed'}</Text>
-        <Text style={[styles.status, { color: status.color }]}>{status.label}</Text>
+        {statuses.map(({ mention, status }) => <Text key={mention} style={[styles.status, { color: status.color }]}>{mention}: {status.label}</Text>)}
         <View style={styles.row}>
-          <Pressable onPress={() => void Linking.openURL(status.url)} style={styles.link}><Text style={styles.linkText}>Open on GitHub</Text></Pressable>
+          <Pressable onPress={() => void Linking.openURL(statuses[0]?.status.url ?? issue.url)} style={styles.link}><Text style={styles.linkText}>Open on GitHub</Text></Pressable>
+          {issue.state === 'open' ? <Pressable onPress={() => void runAgents(issue)} disabled={busy} style={styles.runAgent}><Text style={styles.buttonText}>Run agent</Text></Pressable> : null}
           {issue.state === 'open' ? <Pressable onPress={() => void close(issue)} disabled={busy} style={styles.closeIssue}><Text style={styles.buttonText}>Close issue</Text></Pressable> : null}
         </View>
       </View>
@@ -135,5 +157,6 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   link: { paddingVertical: 8 },
   closeIssue: { backgroundColor: '#7f1d1d', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  runAgent: { backgroundColor: '#2563eb', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   linkText: { color: '#93c5fd', fontSize: 13, fontWeight: '700' }
 })

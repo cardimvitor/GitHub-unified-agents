@@ -78,6 +78,17 @@ export function bodyForExecutor(plan: string, mention: string) {
   return `${cleaned}\n\n---\n${mention} carry out the plan above in this repository and open a pull request.`
 }
 
+// Roda os agentes de uma Issue de novo: um comentário com o texto da Issue dispara os workflows (issue_comment).
+export async function runIssueAgents(token: string, fullName: string, number: number) {
+  const issue = await gh<{ body: string | null }>(token, `/repos/${fullName}/issues/${number}`)
+  const body = issue.body?.trim()
+  if (!body) throw new Error(`Issue #${number} has no text to send to the agents.`)
+  await gh(token, `/repos/${fullName}/issues/${number}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body })
+  })
+}
+
 export async function closeIssue(token: string, fullName: string, number: number) {
   await gh(token, `/repos/${fullName}/issues/${number}`, {
     method: 'PATCH',
