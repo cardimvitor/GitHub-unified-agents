@@ -36,7 +36,16 @@ if ! git diff --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; t
 fi
 
 if git diff --quiet "origin/${BASE}" HEAD; then
-  echo "O agente não alterou o repositório. Nenhum PR criado."
+  # Sem alterações, a resposta do agente (pergunta, análise) vai como comentário na Issue.
+  REPLY="$(mktemp)"
+  {
+    if [ -n "$LAST_MESSAGE" ] && [ -f "$LAST_MESSAGE" ]; then cat "$LAST_MESSAGE"; else echo "(sem resposta do agente)"; fi
+    echo
+    echo "---"
+    echo "_Resposta do agente ${AGENT}. Nenhum arquivo foi alterado._"
+  } > "$REPLY"
+  gh issue comment "$ISSUE" --body-file "$REPLY"
+  echo "O agente não alterou o repositório. Resposta publicada na Issue."
   exit 0
 fi
 
