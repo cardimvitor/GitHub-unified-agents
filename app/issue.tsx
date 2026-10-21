@@ -1,6 +1,8 @@
 import { useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { getIssueDetail, listIssueComments, postIssueComment, type IssueComment, type IssueDetail } from '@/github/agents-status'
 import { githubSession } from '@/storage/github-session'
 import { githubTarget } from '@/storage/github-target'
@@ -16,6 +18,7 @@ export default function IssueScreen() {
   const [mentionAgent, setMentionAgent] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const insets = useSafeAreaInsets()
 
   async function refresh() {
     const token = await githubSession.read()
@@ -67,7 +70,7 @@ export default function IssueScreen() {
     </View>
   }
 
-  return <View style={styles.page}>
+  return <KeyboardAvoidingView style={styles.page} behavior="padding">
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <Text style={styles.title}>#{issue.number} {issue.title}</Text>
       <Text style={styles.meta}>{issue.state === 'open' ? 'open' : 'closed'}{issue.mentions.length ? ` · ${issue.mentions.join(' ')}` : ''}</Text>
@@ -87,7 +90,7 @@ export default function IssueScreen() {
       <Pressable onPress={() => void Linking.openURL(issue.url)} style={styles.link}><Text style={styles.linkText}>Open on GitHub</Text></Pressable>
     </ScrollView>
 
-    <View style={styles.composer}>
+    <View style={[styles.composer, { paddingBottom: insets.bottom + 12 }]}>
       {agentMention ? <Pressable onPress={() => setMentionAgent((value) => !value)} style={[styles.toggle, mentionAgent && styles.toggleOn]}>
         <Text style={styles.buttonText}>{mentionAgent ? `Sends to ${agentMention}` : `Send without ${agentMention}`}</Text>
       </Pressable> : null}
@@ -96,7 +99,7 @@ export default function IssueScreen() {
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send reply</Text>}
       </Pressable>
     </View>
-  </View>
+  </KeyboardAvoidingView>
 }
 
 const styles = StyleSheet.create({
@@ -113,11 +116,11 @@ const styles = StyleSheet.create({
   body: { color: '#e2e8f0', fontSize: 14, lineHeight: 20 },
   link: { paddingVertical: 8 },
   linkText: { color: '#93c5fd', fontSize: 13, fontWeight: '700' },
-  composer: { gap: 8, padding: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#334155' },
+  composer: { gap: 8, paddingHorizontal: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#334155', backgroundColor: '#101827' },
   toggle: { alignSelf: 'flex-start', backgroundColor: '#334155', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   toggleOn: { backgroundColor: '#0f766e' },
   input: { minHeight: 60, maxHeight: 140, color: '#f8fafc', backgroundColor: '#1e293b', borderRadius: 10, fontSize: 15, paddingHorizontal: 12, paddingVertical: 10, textAlignVertical: 'top' },
-  send: { alignItems: 'center', backgroundColor: '#2563eb', borderRadius: 10, paddingVertical: 12 },
+  send: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#2563eb', borderRadius: 10, minHeight: 52, paddingVertical: 12 },
   disabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 13 }
 })
