@@ -35,3 +35,25 @@ export async function splitPlan(plan: string, agents: string[], ask: (prompt: st
   const raw = await ask(splitPrompt(plan, agents))
   return parseSplit(raw, agents)
 }
+
+export const SPLIT_MARKER = 'Split:'
+
+// Instrução que vai junto do pedido de planejamento quando há mais de um agente: o próprio plano já sai dividido.
+export function splitInstruction(agents: string[]) {
+  return [
+    `After the plan, add a line "${SPLIT_MARKER}" and then one JSON object with exactly these keys: ${agents.map((agent) => `"${agent}"`).join(', ')}.`,
+    'Each value is a string with only the steps for that agent, keeping the file names and areas from the plan. Include the overall goal in one sentence in each value. Every agent must get at least one step.'
+  ].join('\n')
+}
+
+// Separa o plano da divisão. Se a divisão não vier válida, devolve só o plano e o app pede a divisão de novo.
+export function extractSplit(answer: string, agents: string[]): { plan: string; parts?: Record<string, string> } {
+  const index = answer.lastIndexOf(SPLIT_MARKER)
+  if (index < 0) return { plan: answer.trim() }
+  const plan = answer.slice(0, index).trim()
+  try {
+    return { plan, parts: parseSplit(answer.slice(index + SPLIT_MARKER.length), agents) }
+  } catch {
+    return { plan: answer.trim() }
+  }
+}

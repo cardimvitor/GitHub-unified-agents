@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 // Conversas do planejamento, guardadas por repositório. Ficam no aparelho e não são enviadas ao GitHub.
-export type StoredEntry = { author: string; text: string; plan?: boolean; created?: boolean }
+export type StoredEntry = { author: string; text: string; plan?: boolean; created?: boolean; parts?: Record<string, string> }
 export type StoredChat = { id: string; title: string; updatedAt: number; entries: StoredEntry[] }
 export type ChatHistory = { chats: StoredChat[]; activeId: string | null }
 
