@@ -9,7 +9,7 @@ export default function ConnectGitHubScreen() {
   const [code, setCode] = useState<string>()
   const [mode, setMode] = useState<'oauth' | 'pat'>('oauth')
   const [pat, setPat] = useState('')
-  const [message, setMessage] = useState('O login usa o fluxo seguro de dispositivo do GitHub.')
+  const [message, setMessage] = useState('Login uses GitHub\'s secure device flow.')
   const [busy, setBusy] = useState(false)
   const attempt = useRef(0)
 
@@ -21,7 +21,7 @@ export default function ConnectGitHubScreen() {
     try {
       const authorization = await beginGitHubDeviceAuthorization()
       setCode(authorization.userCode)
-      setMessage('Confirme o código no GitHub. O app verificará a autorização automaticamente.')
+      setMessage('Confirm the code on GitHub. The app will check the authorization automatically.')
       await Linking.openURL(authorization.verificationUri)
       const deadline = Date.now() + authorization.expiresIn * 1000
       let interval = authorization.interval * 1000
@@ -31,14 +31,14 @@ export default function ConnectGitHubScreen() {
         const result = await pollGitHubAccessToken(authorization.deviceCode)
         if ('token' in result) {
           await githubSession.save(result.token)
-          setMessage('GitHub conectado com sucesso. O token está protegido no armazenamento seguro do dispositivo.')
+          setMessage('GitHub connected. The token is stored in the device\'s secure storage.')
           return
         }
         if (result.status === 'slow_down') interval += 5000
       }
-      if (current === attempt.current) setMessage('O código expirou. Tente novamente.')
+      if (current === attempt.current) setMessage('The code expired. Try again.')
     } catch (error) {
-      if (current === attempt.current) setMessage(error instanceof Error ? error.message : 'Não foi possível conectar ao GitHub.')
+      if (current === attempt.current) setMessage(error instanceof Error ? error.message : 'Could not connect to GitHub.')
     } finally {
       if (current === attempt.current) setBusy(false)
     }
@@ -47,7 +47,7 @@ export default function ConnectGitHubScreen() {
   async function connectPat() {
     const candidate = pat.trim()
     if (!candidate) {
-      setMessage('Cole um fine-grained PAT para continuar.')
+      setMessage('Paste a fine-grained PAT to continue.')
       return
     }
     setBusy(true)
@@ -55,9 +55,9 @@ export default function ConnectGitHubScreen() {
       const user = await getAuthenticatedGitHubUser(candidate)
       await githubSession.save(candidate)
       setPat('')
-      setMessage(`GitHub conectado como ${user.login}. O PAT foi guardado somente no cofre do dispositivo.`)
+      setMessage(`GitHub connected as ${user.login}. The PAT is stored only in the device vault.`)
     } catch {
-      setMessage('O PAT foi recusado. Use um fine-grained PAT com acesso ao repositório escolhido.')
+      setMessage('The PAT was rejected. Use a fine-grained PAT with access to the chosen repository.')
     } finally {
       setBusy(false)
     }
@@ -65,27 +65,27 @@ export default function ConnectGitHubScreen() {
 
   return (
     <View style={styles.page}>
-      <Text style={styles.title}>Autorizar GitHub</Text>
+      <Text style={styles.title}>Authorize GitHub</Text>
       <Text style={styles.copy}>{message}</Text>
       <View style={styles.modeRow}>
         <Pressable onPress={() => setMode('oauth')} style={[styles.mode, mode === 'oauth' && styles.modeActive]}><Text style={styles.modeText}>Login GitHub</Text></Pressable>
-        <Pressable onPress={() => setMode('pat')} style={[styles.mode, mode === 'pat' && styles.modeActive]}><Text style={styles.modeText}>Usar PAT</Text></Pressable>
+        <Pressable onPress={() => setMode('pat')} style={[styles.mode, mode === 'pat' && styles.modeActive]}><Text style={styles.modeText}>Use a PAT</Text></Pressable>
       </View>
       {mode === 'oauth' ? (
         <>
           {code ? <TextInput editable={false} value={code} style={styles.code} /> : null}
           <Pressable disabled={busy} onPress={() => void connect()} style={[styles.button, busy && styles.disabled]}>
-            {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Continuar com GitHub</Text>}
+            {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Continue with GitHub</Text>}
           </Pressable>
-          <Text style={styles.note}>Você só precisa autorizar sua própria conta. Nenhum token é versionado neste repositório.</Text>
+          <Text style={styles.note}>You only need to authorize your own account. No token is committed to this repository.</Text>
         </>
       ) : (
         <>
           <TextInput value={pat} onChangeText={setPat} autoCapitalize="none" autoCorrect={false} secureTextEntry placeholder="github_pat_…" placeholderTextColor="#64748b" style={styles.input} />
           <Pressable disabled={busy} onPress={() => void connectPat()} style={[styles.button, busy && styles.disabled]}>
-            {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Validar e guardar PAT</Text>}
+            {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>Validate and save PAT</Text>}
           </Pressable>
-          <Text style={styles.note}>Use apenas fine-grained PAT, limitado ao repositório desejado. Este é um fallback; prefira Login GitHub.</Text>
+          <Text style={styles.note}>Use only a fine-grained PAT limited to the repository you want. This is a fallback; prefer GitHub login.</Text>
         </>
       )}
     </View>

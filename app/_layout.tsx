@@ -16,13 +16,13 @@ export default function RootLayout() {
         <Stack.Screen name="connect-claude" options={{ title: 'Conectar Claude API' }} />
         <Stack.Screen name="claude" options={{ title: 'Claude' }} />
         <Stack.Screen name="claude-guide" options={{ title: 'Claude por assinatura' }} />
-        <Stack.Screen name="setup-claude-subscription" options={{ title: 'Configurar Claude no GitHub' }} />
+        <Stack.Screen name="setup-claude-subscription" options={{ title: 'Set up Claude on GitHub' }} />
         <Stack.Screen name="connect-openai" options={{ title: 'ChatGPT / Codex' }} />
         <Stack.Screen name="openai" options={{ title: 'ChatGPT / Codex' }} />
         <Stack.Screen name="connect-chatgpt" options={{ title: 'Conectar ChatGPT' }} />
         <Stack.Screen name="codex-guide" options={{ title: 'Codex por assinatura' }} />
         <Stack.Screen name="chat" options={{ title: 'Planejamento compartilhado' }} />
-        <Stack.Screen name="agents" options={{ title: 'Issues e agentes' }} />
+        <Stack.Screen name="agents" options={{ title: 'Issues and agents' }} />
       </Stack>
     </KeyboardProvider>
   )

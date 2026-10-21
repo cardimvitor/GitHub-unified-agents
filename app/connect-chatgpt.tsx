@@ -8,14 +8,14 @@ export default function ConnectChatGpt() {
   const [busy, setBusy] = useState(false)
   const [connected, setConnected] = useState(false)
   const [login, setLogin] = useState<ChatGptDeviceLogin | null>(null)
-  const [message, setMessage] = useState('Conecte sua assinatura ChatGPT Plus ou Pro. O GitHub não participa deste login.')
+  const [message, setMessage] = useState('Connect your ChatGPT Plus or Pro subscription. GitHub is not part of this login.')
   const attempt = useRef(0)
 
   useEffect(() => {
     void chatGptSession.read().then((session) => {
       if (session) {
         setConnected(true)
-        setMessage('ChatGPT conectado por assinatura neste dispositivo.')
+        setMessage('ChatGPT subscription connected on this device.')
       }
     })
     return () => { attempt.current += 1 }
@@ -28,7 +28,7 @@ export default function ConnectChatGpt() {
     try {
       const request = await beginChatGptDeviceLogin()
       setLogin(request)
-      setMessage('Abra o link, entre na sua conta ChatGPT e confirme o código abaixo. O app detecta a confirmação automaticamente.')
+      setMessage('Open the link, sign in to your ChatGPT account and confirm the code below. The app detects the confirmation automatically.')
       await Linking.openURL(request.verificationUrl)
       while (current === attempt.current && Date.now() < request.expiresAt) {
         await new Promise((resolve) => setTimeout(resolve, request.intervalMs))
@@ -37,13 +37,13 @@ export default function ConnectChatGpt() {
         if (session) {
           setConnected(true)
           setLogin(null)
-          setMessage('ChatGPT conectado por assinatura neste dispositivo.')
+          setMessage('ChatGPT subscription connected on this device.')
           return
         }
       }
-      if (current === attempt.current) setMessage('O código expirou. Tente novamente.')
+      if (current === attempt.current) setMessage('The code expired. Try again.')
     } catch (error) {
-      if (current === attempt.current) setMessage(error instanceof Error ? error.message : 'Não foi possível concluir o login.')
+      if (current === attempt.current) setMessage(error instanceof Error ? error.message : 'Could not finish the login.')
     } finally {
       if (current === attempt.current) setBusy(false)
     }
@@ -53,7 +53,7 @@ export default function ConnectChatGpt() {
     attempt.current += 1
     setLogin(null)
     setBusy(false)
-    setMessage('Login cancelado.')
+    setMessage('Login cancelled.')
   }
 
   async function disconnect() {
@@ -62,25 +62,25 @@ export default function ConnectChatGpt() {
     try {
       const revoked = await disconnectChatGpt()
       setConnected(false)
-      setMessage(revoked ? 'Sessão ChatGPT revogada e removida deste dispositivo.' : 'Sessão local removida. A revogação remota não pôde ser confirmada.')
+      setMessage(revoked ? 'ChatGPT session revoked and removed from this device.' : 'Local session removed. Remote revocation could not be confirmed.')
     } catch {
       setConnected(false)
-      setMessage('Sessão local removida. A revogação remota não pôde ser confirmada.')
+      setMessage('Local session removed. Remote revocation could not be confirmed.')
     } finally {
       setBusy(false)
     }
   }
 
   return <View style={styles.page}>
-    <Text style={styles.title}>Usar assinatura ChatGPT</Text>
+    <Text style={styles.title}>Use ChatGPT subscription</Text>
     <Text style={styles.copy}>{message}</Text>
     {login ? <TextInput editable={false} value={login.userCode} style={styles.code} /> : null}
-    {login ? <Pressable onPress={cancel} style={styles.cancel}><Text style={styles.buttonText}>Cancelar</Text></Pressable> : null}
+    {login ? <Pressable onPress={cancel} style={styles.cancel}><Text style={styles.buttonText}>Cancel</Text></Pressable> : null}
     {!login ? <Pressable disabled={busy} onPress={() => void connect()} style={[styles.button, busy && styles.disabled]}>
-      {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{connected ? 'Reconectar ChatGPT' : 'Continuar com ChatGPT'}</Text>}
+      {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{connected ? 'Reconnect ChatGPT' : 'Continue with ChatGPT'}</Text>}
     </Pressable> : null}
-    {connected && !login ? <Pressable disabled={busy} onPress={() => void disconnect()} style={[styles.disconnect, busy && styles.disabled]}><Text style={styles.buttonText}>Desconectar neste dispositivo</Text></Pressable> : null}
-    <Text style={styles.note}>O login usa o código de dispositivo oficial da OpenAI: o app não recebe sua senha e não abre um servidor local. A sessão fica no cofre do aparelho.</Text>
+    {connected && !login ? <Pressable disabled={busy} onPress={() => void disconnect()} style={[styles.disconnect, busy && styles.disabled]}><Text style={styles.buttonText}>Disconnect on this device</Text></Pressable> : null}
+    <Text style={styles.note}>The login uses OpenAI's official device code: the app never receives your password and does not open a local server. The session stays in the device vault.</Text>
   </View>
 }
 

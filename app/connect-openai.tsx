@@ -6,19 +6,19 @@ import { providerCredentials } from '@/storage/provider-credentials'
 export default function ConnectOpenAiScreen() {
   const [apiKey, setApiKey] = useState('')
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState('Use uma chave OpenAI para chamadas diretas de modelo. Esta opção usa faturamento da API, não a assinatura ChatGPT.')
+  const [message, setMessage] = useState('Use an OpenAI key for direct model calls. This option uses API billing, not the ChatGPT subscription.')
 
   async function connect() {
     const candidate = apiKey.trim()
-    if (!candidate) return setMessage('Cole sua chave OpenAI para continuar.')
+    if (!candidate) return setMessage('Paste your OpenAI key to continue.')
     setBusy(true)
     try {
       await validateOpenAiApiKey(candidate)
       await providerCredentials.save('openai', candidate)
       setApiKey('')
-      setMessage('OpenAI API conectada. A chave foi guardada somente no cofre seguro deste dispositivo.')
+      setMessage('OpenAI API connected. The key is stored only in this device\'s secure vault.')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Não foi possível conectar OpenAI API.')
+      setMessage(error instanceof Error ? error.message : 'Could not connect the OpenAI API.')
     } finally {
       setBusy(false)
     }
@@ -27,9 +27,9 @@ export default function ConnectOpenAiScreen() {
   return <View style={styles.page}>
     <Text style={styles.title}>ChatGPT / Codex</Text>
     <Text style={styles.copy}>{message}</Text>
-    <TextInput value={apiKey} onChangeText={setApiKey} autoCapitalize="none" autoCorrect={false} secureTextEntry placeholder="Chave OpenAI (opcional)" placeholderTextColor="#64748b" style={styles.input} />
-    <Pressable disabled={busy} onPress={() => void connect()} style={[styles.button, busy && styles.disabled]}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Validar OpenAI API</Text>}</Pressable>
-    <Text style={styles.note}>O login por assinatura ChatGPT/Codex exige o fluxo oficial de Sign in with ChatGPT e um runtime Codex complementar; não há login de assinatura embutido nesta versão móvel pura.</Text>
+    <TextInput value={apiKey} onChangeText={setApiKey} autoCapitalize="none" autoCorrect={false} secureTextEntry placeholder="OpenAI key (optional)" placeholderTextColor="#64748b" style={styles.input} />
+    <Pressable disabled={busy} onPress={() => void connect()} style={[styles.button, busy && styles.disabled]}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Validate OpenAI API</Text>}</Pressable>
+    <Text style={styles.note}>Subscription login for ChatGPT/Codex requires the official Sign in with ChatGPT flow and a companion Codex runtime; this pure mobile version has no built-in subscription login.</Text>
   </View>
 }
 

@@ -20,11 +20,11 @@ async function api<T>(token: string, path: string, init?: RequestInit): Promise<
   if (response.status === 401) {
     // Token expirado ou revogado: remove o login salvo para o app pedir a conexão de novo.
     await githubSession.clear()
-    throw new Error('O GitHub recusou o login salvo (token expirado ou revogado). Conecte o GitHub de novo na tela inicial.')
+    throw new Error('GitHub refused the saved login (token expired or revoked). Connect GitHub again on the home screen.')
   }
   if (!response.ok) {
     const data = await response.json().catch(() => ({})) as { message?: string }
-    throw new Error(data.message ? `GitHub recusou: ${data.message} (${response.status}).` : `GitHub respondeu com ${response.status}.`)
+    throw new Error(data.message ? `GitHub refused: ${data.message} (${response.status}).` : `GitHub responded with ${response.status}.`)
   }
   // Algumas respostas de sucesso não têm corpo (ex.: PUT de permissões responde 204).
   const text = await response.text()
@@ -44,7 +44,7 @@ export async function createRepository(token: string, name: string, isPrivate: b
     method: 'POST',
     body: JSON.stringify({ name, private: isPrivate, auto_init: true, has_issues: true })
   })
-  if (!repo) throw new Error('GitHub não criou o repositório.')
+  if (!repo) throw new Error('GitHub did not create the repository.')
   return toRepo(repo)
 }
 
@@ -92,7 +92,7 @@ export async function enableCopilotReview(token: string, fullName: string): Prom
   try {
     const existing = await api<Array<{ name: string }>>(token, `/repos/${owner}/${repo}/rulesets`) ?? []
     if (existing.some((ruleset) => ruleset.name === COPILOT_RULESET)) {
-      return { ok: true, message: 'Revisão do Copilot já estava ligada.' }
+      return { ok: true, message: 'Copilot review was already on.' }
     }
     await api(token, `/repos/${owner}/${repo}/rulesets`, {
       method: 'POST',
@@ -104,10 +104,10 @@ export async function enableCopilotReview(token: string, fullName: string): Prom
         rules: [{ type: 'copilot_code_review', parameters: { review_on_push: true, review_draft_pull_requests: false } }]
       })
     })
-    return { ok: true, message: 'Revisão automática do Copilot ligada.' }
+    return { ok: true, message: 'Automatic Copilot review turned on.' }
   } catch (error) {
-    const reason = error instanceof Error ? error.message : 'erro desconhecido'
-    return { ok: false, message: `Não foi possível ligar a revisão do Copilot pela API: ${reason} Ative em Settings → Rules, criando um ruleset com a regra de revisão automática do Copilot.` }
+    const reason = error instanceof Error ? error.message : 'unknown error'
+    return { ok: false, message: `Could not turn on Copilot review through the API: ${reason} Turn it on in Settings → Rules by creating a ruleset with the automatic Copilot review rule.` }
   }
 }
 
@@ -121,8 +121,8 @@ export async function allowActionsPullRequests(token: string, fullName: string):
     })
     return { ok: true, message: 'Actions pode criar PRs.' }
   } catch (error) {
-    const reason = error instanceof Error ? error.message : 'erro desconhecido'
-    return { ok: false, message: `Não foi possível liberar Actions para criar PRs: ${reason}` }
+    const reason = error instanceof Error ? error.message : 'unknown error'
+    return { ok: false, message: `Could not allow Actions to create PRs: ${reason}` }
   }
 }
 

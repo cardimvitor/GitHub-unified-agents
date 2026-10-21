@@ -22,7 +22,7 @@ async function githubError(response: Response, fallback: string): Promise<Error>
 
 function clientId(): string {
   const value = process.env.EXPO_PUBLIC_GITHUB_CLIENT_ID
-  if (!value) throw new Error('A configuração segura da versão não inclui o login GitHub. Contate o administrador do aplicativo.')
+  if (!value) throw new Error('This build does not include GitHub login. Contact the app administrator.')
   return value
 }
 
@@ -32,7 +32,7 @@ export async function beginGitHubDeviceAuthorization(): Promise<DeviceAuthorizat
     headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ client_id: clientId(), scope: 'repo workflow' }).toString()
   })
-  if (!response.ok) throw await githubError(response, 'Não foi possível iniciar o login no GitHub')
+  if (!response.ok) throw await githubError(response, 'Could not start GitHub login')
   const payload = await response.json()
   return {
     deviceCode: payload.device_code,
@@ -55,10 +55,10 @@ export async function pollGitHubAccessToken(deviceCode: string): Promise<GitHubP
       grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
     }).toString()
   })
-  if (!response.ok) throw await githubError(response, 'Falha ao verificar o login no GitHub')
+  if (!response.ok) throw await githubError(response, 'Could not verify GitHub login')
   const payload = (await response.json()) as TokenResponse
   if (payload.access_token) return { token: payload.access_token }
   if (payload.error === 'authorization_pending') return { status: 'pending' }
   if (payload.error === 'slow_down') return { status: 'slow_down' }
-  throw new Error('A autorização no GitHub não foi concluída.')
+  throw new Error('GitHub authorization was not completed.')
 }

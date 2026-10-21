@@ -18,7 +18,7 @@ async function gh<T>(token: string, path: string, init?: RequestInit): Promise<T
   })
   if (!response.ok) {
     const data = await response.json().catch(() => ({})) as { message?: string }
-    throw new Error(data.message ? `GitHub recusou: ${data.message} (${response.status}).` : `GitHub respondeu com ${response.status}.`)
+    throw new Error(data.message ? `GitHub refused: ${data.message} (${response.status}).` : `GitHub responded with ${response.status}.`)
   }
   return response.status === 204 ? (null as T) : response.json() as Promise<T>
 }
@@ -66,7 +66,7 @@ export async function listPendingRuns(token: string, fullName: string): Promise<
 export async function approveRun(token: string, fullName: string, run: PendingRun) {
   await gh(token, `/repos/${fullName}/actions/runs/${run.runId}/pending_deployments`, {
     method: 'POST',
-    body: JSON.stringify({ environment_ids: [run.environmentId], state: 'approved', comment: 'Aprovado pelo app' })
+    body: JSON.stringify({ environment_ids: [run.environmentId], state: 'approved', comment: 'Approved from the app' })
   })
 }
 
@@ -75,7 +75,18 @@ export function bodyForExecutor(plan: string, mention: string) {
   const others = AGENT_MENTIONS.filter((item) => item !== mention)
   let cleaned = plan
   for (const other of others) cleaned = cleaned.split(other).join(other.slice(1))
-  return `${cleaned}\n\n---\n${mention} execute o plano acima neste repositório e abra um pull request.`
+  return `${cleaned}\n\n---\n${mention} carry out the plan above in this repository and open a pull request.`
+}
+
+// Roda os agentes de uma Issue de novo: um comentário com o texto da Issue dispara os workflows (issue_comment).
+export async function runIssueAgents(token: string, fullName: string, number: number) {
+  const issue = await gh<{ body: string | null }>(token, `/repos/${fullName}/issues/${number}`)
+  const body = issue.body?.trim()
+  if (!body) throw new Error(`Issue #${number} has no text to send to the agents.`)
+  await gh(token, `/repos/${fullName}/issues/${number}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body })
+  })
 }
 
 export async function closeIssue(token: string, fullName: string, number: number) {

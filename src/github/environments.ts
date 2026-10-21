@@ -17,7 +17,7 @@ async function call<T>(token: string, path: string, init?: RequestInit): Promise
   })
   if (response.status === 401) {
     await githubSession.clear()
-    throw new Error('O GitHub recusou o login salvo (token expirado ou revogado). Conecte o GitHub de novo na tela inicial.')
+    throw new Error('GitHub refused the saved login (token expired or revoked). Connect GitHub again on the home screen.')
   }
   const data = response.status === 204 ? null : await response.json().catch(() => null) as T | null
   const message = (data as { message?: string } | null)?.message ?? ''
@@ -26,7 +26,7 @@ async function call<T>(token: string, path: string, init?: RequestInit): Promise
 
 export async function repositoryInfo(token: string, fullName: string) {
   const result = await call<{ id: number; private: boolean }>(token, `/repos/${fullName}`)
-  if (!result.data) throw new Error(`Repositório ${fullName} não encontrado.`)
+  if (!result.data) throw new Error(`Repository ${fullName} not found.`)
   return { id: result.data.id, private: result.data.private }
 }
 
@@ -38,24 +38,24 @@ export async function ensureAgentsEnvironment(token: string, fullName: string, a
   const repo = await repositoryInfo(token, fullName)
   if (automatic) {
     const open = await call(token, `/repos/${fullName}/environments/${AGENTS_ENVIRONMENT}`, { method: 'PUT', body: JSON.stringify({ reviewers: [] }) })
-    if (!open.ok) throw new Error(`Não foi possível configurar o environment agents sem aprovação (${open.status}). ${open.message}`)
-    return { repositoryId: repo.id, protected: false, message: 'Environment agents sem aprovação: os agentes rodam automaticamente para membros do repositório.' }
+    if (!open.ok) throw new Error(`Could not set up the agents environment without approval (${open.status}). ${open.message}`)
+    return { repositoryId: repo.id, protected: false, message: 'Agents environment without approval: agents run automatically for repository members.' }
   }
   const user = await call<{ id: number }>(token, '/user')
-  if (!user.data) throw new Error('Não foi possível identificar sua conta GitHub.')
+  if (!user.data) throw new Error('Could not identify your GitHub account.')
   const withReviewer = await call(token, `/repos/${fullName}/environments/${AGENTS_ENVIRONMENT}`, {
     method: 'PUT',
     body: JSON.stringify({ reviewers: [{ type: 'User', id: user.data.id }] })
   })
   if (withReviewer.ok) {
-    return { repositoryId: repo.id, protected: true, message: 'Environment agents criado: cada execução espera sua aprovação.' }
+    return { repositoryId: repo.id, protected: true, message: 'Agents environment created: each run waits for your approval.' }
   }
   const plain = await call(token, `/repos/${fullName}/environments/${AGENTS_ENVIRONMENT}`, { method: 'PUT', body: JSON.stringify({}) })
-  if (!plain.ok) throw new Error(`Não foi possível criar o environment agents (${plain.status}). ${plain.message}`)
+  if (!plain.ok) throw new Error(`Could not create the agents environment (${plain.status}). ${plain.message}`)
   return {
     repositoryId: repo.id,
     protected: false,
-    message: 'Environment agents criado sem aprovação obrigatória: neste repositório a exigência de revisor não está disponível no plano atual. Os agentes rodam sem a sua aprovação.'
+    message: 'Agents environment created without required approval: reviewer rules are not available for this repository on the current plan. Agents run without your approval.'
   }
 }
 

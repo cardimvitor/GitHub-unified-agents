@@ -18,12 +18,12 @@ type ModelState = { models: string[]; selected: string | null; active: string }
 
 // Instrução do modo planejamento: produz um plano revisável, sem executar nada.
 const PLANNING_INSTRUCTION = [
-  'Modo planejamento: não escreva código nem execute nada.',
-  'Responda em português com:',
-  '1) Objetivo em uma frase;',
-  '2) Passos numerados, cada um com o arquivo ou área afetada;',
-  '3) Riscos e perguntas em aberto.',
-  'Termine com a linha "Pronto para executar." quando o plano estiver completo.'
+  'Planning mode: do not write code or run anything.',
+  'Answer in English with:',
+  '1) Goal in one sentence;',
+  '2) Numbered steps, each with the affected file or area;',
+  '3) Risks and open questions.',
+  'End with the line "Ready to run." when the plan is complete.'
 ].join('\n')
 
 // Agentes que executam o plano no GitHub Actions. Cada um tem um workflow que reage à menção.
@@ -34,7 +34,7 @@ const EXECUTORS: Array<{ id: Executor; label: string; mention: string }> = [
 ]
 
 function titleFrom(plan: string) {
-  const line = plan.split('\n').map((item) => item.replace(/[#*`]/g, '').trim()).find(Boolean) ?? 'Tarefa do planejamento'
+  const line = plan.split('\n').map((item) => item.replace(/[#*`]/g, '').trim()).find(Boolean) ?? 'Planning task'
   return line.slice(0, 120)
 }
 
@@ -69,7 +69,7 @@ export default function SharedChatScreen() {
     let active = true
     modelsFor(target)
       .then((state) => { if (active) setModelState(state) })
-      .catch((error) => { if (active) setModelsError(error instanceof Error ? error.message : 'Não foi possível listar modelos.') })
+      .catch((error) => { if (active) setModelsError(error instanceof Error ? error.message : 'Could not list models.') })
     return () => { active = false }
   }, [target])
 
@@ -89,18 +89,18 @@ export default function SharedChatScreen() {
     const question = prompt.trim()
     if (!question || busy || !target) return
     setPrompt('')
-    setEntries((current) => [...current, { author: 'Você', text: question }])
+    setEntries((current) => [...current, { author: 'You', text: question }])
     setBusy(true)
     try {
-      const transcript = [...entries, { author: 'Você', text: question }]
+      const transcript = [...entries, { author: 'You', text: question }]
         .map((entry) => `${entry.author}: ${entry.text}`)
         .join('\n\n')
-      const instruction = planning ? `${PLANNING_INSTRUCTION}\n\n` : 'Responda em português, quando apropriado.\n\n'
+      const instruction = planning ? `${PLANNING_INSTRUCTION}\n\n` : 'Answer in English, when appropriate.\n\n'
       const answer = await askProvider(target, `${instruction}Conversa compartilhada:\n\n${transcript}`)
       const served = answer.model === answer.requested ? answer.model : `${answer.model} (pedido: ${answer.requested})`
       setEntries((current) => [...current, { author: `${targetLabel} · ${served}`, text: answer.text, plan: planning }])
     } catch (error) {
-      setEntries((current) => [...current, { author: targetLabel || 'Erro', text: error instanceof Error ? error.message : 'Não foi possível obter resposta.' }])
+      setEntries((current) => [...current, { author: targetLabel || 'Error', text: error instanceof Error ? error.message : 'Could not get a response.' }])
     } finally {
       setBusy(false)
     }
@@ -133,10 +133,10 @@ export default function SharedChatScreen() {
         const issue = await createIssue(token, owner, name, title, bodyForExecutor(part, item.mention))
         lines.push(`${item.mention}: ${issue.html_url}`)
       }
-      setEntries((current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issues criadas:\n${lines.join('\n')}\nOs agentes executam pelo GitHub Actions.` }))
+      setEntries((current) => current.map((entry, position) => (position === index ? { ...entry, created: true } : entry)).concat({ author: 'GitHub', text: `Issues created:\n${lines.join('\n')}\nThe agents run through GitHub Actions.` }))
     } catch (error) {
-      const failure = error instanceof Error ? error.message : 'Não foi possível criar a Issue.'
-      setEntries((current) => [...current, { author: 'GitHub', text: lines.length > 0 ? `${lines.join('\n')}\nAs demais não foram criadas: ${failure}` : failure }])
+      const failure = error instanceof Error ? error.message : 'Could not create the Issue.'
+      setEntries((current) => [...current, { author: 'GitHub', text: lines.length > 0 ? `${lines.join('\n')}\nThe rest were not created: ${failure}` : failure }])
     } finally {
       setBusy(false)
     }
@@ -144,7 +144,7 @@ export default function SharedChatScreen() {
 
   if (connected.length === 0) {
     return <View style={styles.page}>
-      <Text style={styles.empty}>Nenhum provider conectado. Conecte um na tela inicial para conversar aqui.</Text>
+      <Text style={styles.empty}>No provider connected. Connect one on the home screen to chat here.</Text>
     </View>
   }
 
@@ -154,23 +154,23 @@ export default function SharedChatScreen() {
         <Text style={[styles.chipText, target === item.id && styles.chipTextSelected]}>{item.label}</Text>
       </Pressable>)}
       <Pressable onPress={() => setPlanning((current) => !current)} style={[styles.chip, planning && styles.chipSelected]}>
-        <Text style={[styles.chipText, planning && styles.chipTextSelected]}>Planejamento {planning ? 'ligado' : 'desligado'}</Text>
+        <Text style={[styles.chipText, planning && styles.chipTextSelected]}>Planning {planning ? 'on' : 'off'}</Text>
       </Pressable>
     </View>
 
     {planning ? <View style={styles.providers}>
       {EXECUTORS.map((item) => <Pressable key={item.id} onPress={() => toggleExecutor(item.id)} style={[styles.chip, executors.includes(item.id) && styles.chipSelected]}>
-        <Text style={[styles.chipText, executors.includes(item.id) && styles.chipTextSelected]}>Executar com {item.label}</Text>
+        <Text style={[styles.chipText, executors.includes(item.id) && styles.chipTextSelected]}>Run with {item.label}</Text>
       </Pressable>)}
     </View> : null}
 
-    <Link href="/agents" style={styles.agentsLink}>Issues e agentes</Link>
+    <Link href="/agents" style={styles.agentsLink}>Issues and agents</Link>
     {planning ? <RepositoryPanel repository={repository} githubConnected={githubConnected} onChange={setRepository} /> : null}
 
-    <Text style={styles.modelHint}>{modelsError ?? (modelState ? 'Modelos disponíveis. Toque para usar na próxima mensagem.' : 'Carregando modelos…')}</Text>
+    <Text style={styles.modelHint}>{modelsError ?? (modelState ? 'Models available. Tap one to use it for the next message.' : 'Loading models…')}</Text>
     {modelState ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modelScroll} contentContainerStyle={styles.modelRow}>
       <Pressable onPress={() => void chooseModel(null)} style={[styles.modelChip, !modelState.selected && styles.chipSelected]}>
-        <Text style={[styles.chipText, !modelState.selected && styles.chipTextSelected]}>Automático</Text>
+        <Text style={[styles.chipText, !modelState.selected && styles.chipTextSelected]}>Automatic</Text>
       </Pressable>
       {modelState.models.map((model) => <Pressable key={model} onPress={() => void chooseModel(model)} style={[styles.modelChip, modelState.selected === model && styles.chipSelected]}>
         <Text style={[styles.chipText, modelState.selected === model && styles.chipTextSelected]}>{model}</Text>
@@ -178,19 +178,19 @@ export default function SharedChatScreen() {
     </ScrollView> : null}
 
     <ScrollView ref={messagesRef} style={styles.messages} contentContainerStyle={styles.messagesContent} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: true })}>
-      {entries.length === 0 ? <Text style={styles.empty}>{planning ? 'Descreva o que quer construir. Eu respondo com um plano que você pode transformar em Issue para o Claude Code executar.' : 'Conversa livre. O histórico fica só nesta tela e some ao sair.'}</Text> : entries.map((entry, index) => <View key={`${entry.author}-${index}`} style={styles.message}>
+      {entries.length === 0 ? <Text style={styles.empty}>{planning ? 'Describe what you want to build. I will answer with a plan you can turn into an Issue for an agent to run.' : 'Free chat. The history stays on this screen and disappears when you leave.'}</Text> : entries.map((entry, index) => <View key={`${entry.author}-${index}`} style={styles.message}>
         <Text style={styles.author}>{entry.author}</Text>
         <Text style={styles.messageText}>{entry.text}</Text>
         {entry.plan && !entry.created && validRepo && githubConnected ? <Pressable onPress={() => void createIssuesFrom(index)} disabled={busy} style={[styles.issueButton, busy && styles.disabled]}>
-          <Text style={styles.issueButtonText}>Criar {selectedExecutors.length > 1 ? 'Issues' : 'Issue'} com {selectedMentions} em {repository.trim()}</Text>
+          <Text style={styles.issueButtonText}>Create {selectedExecutors.length > 1 ? 'Issues' : 'Issue'} with {selectedMentions} in {repository.trim()}</Text>
         </Pressable> : null}
       </View>)}
     </ScrollView>
 
     <View style={[styles.composer, { paddingBottom: insets.bottom + 4 }]}>
-      <TextInput value={prompt} onChangeText={setPrompt} multiline placeholder={planning ? 'Descreva a tarefa' : 'Mensagem'} placeholderTextColor="#64748b" style={styles.input} />
+      <TextInput value={prompt} onChangeText={setPrompt} multiline placeholder={planning ? 'Describe the task' : 'Message'} placeholderTextColor="#64748b" style={styles.input} />
       <Pressable onPress={() => void send()} disabled={busy || !target} style={[styles.send, (busy || !target) && styles.disabled]}>
-        {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendText}>Enviar</Text>}
+        {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendText}>Send</Text>}
       </Pressable>
     </View>
   </KeyboardAvoidingView>

@@ -1,6 +1,6 @@
 function messageFor(status: number) {
-  if (status === 401 || status === 403) return 'A chave OpenAI foi recusada. Confira a chave e o acesso da conta.'
-  return `OpenAI não respondeu à validação (HTTP ${status}). Tente novamente.`
+  if (status === 401 || status === 403) return 'The OpenAI key was rejected. Check the key and the account access.'
+  return `OpenAI did not respond to validation (HTTP ${status}). Try again.`
 }
 
 export async function validateOpenAiApiKey(apiKey: string) {

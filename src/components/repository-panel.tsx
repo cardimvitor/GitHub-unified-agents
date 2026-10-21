@@ -37,7 +37,7 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
 
   async function token() {
     const value = await githubSession.read()
-    if (!value) throw new Error('Conecte o GitHub na tela inicial antes de escolher um repositório.')
+    if (!value) throw new Error('Connect GitHub on the home screen before choosing a repository.')
     return value
   }
 
@@ -47,7 +47,7 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
     try {
       await action()
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Não foi possível concluir.')
+      setStatus(error instanceof Error ? error.message : 'Could not finish.')
     } finally {
       setBusy(false)
     }
@@ -64,20 +64,20 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
     await githubTarget.save(fullName)
     onChange(fullName)
     setMode('closed')
-    setStatus(`Repositório ${fullName} selecionado.`)
-    await run('Verificando secrets…', () => checkSecrets(fullName))
+    setStatus(`Repository ${fullName} selected.`)
+    await run('Checking secrets…', () => checkSecrets(fullName))
   }
 
   async function openList() {
     if (mode === 'list') return setMode('closed')
     setMode('list')
-    await run('Carregando repositórios…', async () => setRepos(await listRepositories(await token())))
+    await run('Loading repositories…', async () => setRepos(await listRepositories(await token())))
   }
 
   async function create() {
     const name = newName.trim()
-    if (!/^[A-Za-z0-9._-]+$/.test(name)) return setStatus('Use só letras, números, ponto, traço ou sublinhado no nome.')
-    await run('Criando repositório…', async () => {
+    if (!/^[A-Za-z0-9._-]+$/.test(name)) return setStatus('Use only letters, numbers, dots, dashes or underscores in the name.')
+    await run('Creating repository…', async () => {
       const created = await createRepository(await token(), name, newPrivate)
       setNewName('')
       await select(created.fullName)
@@ -86,43 +86,43 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
   }
 
   async function configure(fullName: string) {
-    await run('Configurando agentes…', async () => {
+    await run('Setting up agents…', async () => {
       const authToken = await token()
-      await configureAgents(authToken, fullName, (path) => setStatus(`Gravando ${path}…`))
+      await configureAgents(authToken, fullName, (path) => setStatus(`Writing ${path}…`))
       const environment = await ensureAgentsEnvironment(authToken, fullName, automatic)
-      setStatus('Enviando credenciais ao environment…')
+      setStatus('Sending credentials to the environment…')
       setReports(await pushAgentSecrets(authToken, environment.repositoryId))
       const copilot = await enableCopilotReview(authToken, fullName)
       const pulls = await allowActionsPullRequests(authToken, fullName)
       await checkSecrets(fullName)
-      setStatus(`Agentes configurados. ${environment.message} ${copilot.message} ${pulls.message}`)
+      setStatus(`Agents set up. ${environment.message} ${copilot.message} ${pulls.message}`)
     })
   }
 
   return <View style={styles.box}>
     <View style={styles.row}>
-      <Text numberOfLines={1} style={styles.current}>{repository || 'Nenhum repositório escolhido'}</Text>
+      <Text numberOfLines={1} style={styles.current}>{repository || 'No repository chosen'}</Text>
       <Pressable onPress={() => void openList()} disabled={!githubConnected || busy} style={styles.button}>
-        <Text style={styles.buttonText}>{mode === 'list' ? 'Fechar' : 'Escolher'}</Text>
+        <Text style={styles.buttonText}>{mode === 'list' ? 'Close' : 'Choose'}</Text>
       </Pressable>
       <Pressable onPress={() => setMode(mode === 'create' ? 'closed' : 'create')} disabled={!githubConnected || busy} style={styles.button}>
-        <Text style={styles.buttonText}>Criar</Text>
+        <Text style={styles.buttonText}>Create</Text>
       </Pressable>
     </View>
 
     {mode === 'list' ? <ScrollView style={styles.list} nestedScrollEnabled>
       {repos.map((item) => <Pressable key={item.fullName} onPress={() => void select(item.fullName)} style={styles.item}>
-        <Text style={styles.itemText}>{item.fullName}{item.private ? ' · privado' : ''}</Text>
+        <Text style={styles.itemText}>{item.fullName}{item.private ? ' · private' : ''}</Text>
       </Pressable>)}
     </ScrollView> : null}
 
     {mode === 'create' ? <View style={styles.createRow}>
-      <TextInput value={newName} onChangeText={setNewName} autoCapitalize="none" autoCorrect={false} placeholder="nome-do-repositorio" placeholderTextColor="#64748b" style={styles.input} />
+      <TextInput value={newName} onChangeText={setNewName} autoCapitalize="none" autoCorrect={false} placeholder="repository-name" placeholderTextColor="#64748b" style={styles.input} />
       <Pressable onPress={() => setNewPrivate((value) => !value)} style={styles.button}>
-        <Text style={styles.buttonText}>{newPrivate ? 'Privado' : 'Público'}</Text>
+        <Text style={styles.buttonText}>{newPrivate ? 'Private' : 'Public'}</Text>
       </Pressable>
       <Pressable onPress={() => void create()} disabled={busy || !newName.trim()} style={styles.button}>
-        <Text style={styles.buttonText}>Criar e configurar</Text>
+        <Text style={styles.buttonText}>Create and set up</Text>
       </Pressable>
     </View> : null}
 
@@ -130,15 +130,15 @@ export function RepositoryPanel({ repository, githubConnected, onChange }: Props
       <Text style={styles.buttonText}>Setup</Text>
     </Pressable> : null}
     {repository && !busy && mode === 'closed' ? <Pressable onPress={() => void toggleAutomatic()} style={[styles.toggle, automatic && styles.toggleOn]}>
-      <Text style={styles.buttonText}>{automatic ? 'Automático: sem aprovação' : 'Exigir aprovação antes de rodar'}</Text>
+      <Text style={styles.buttonText}>{automatic ? 'Automatic: no approval' : 'Require approval before running'}</Text>
     </Pressable> : null}
-    {repository && !busy && mode === 'closed' ? <Text style={styles.status}>Setup grava os arquivos dos agentes, cria o environment, envia as credenciais que o app tem e tenta ligar a revisão do Copilot.</Text> : null}
+    {repository && !busy && mode === 'closed' ? <Text style={styles.status}>Setup writes the agent files, creates the environment, sends the credentials the app has, and tries to turn on Copilot review.</Text> : null}
 
     {busy ? <ActivityIndicator color="#60a5fa" /> : null}
     {status ? <Text style={styles.status}>{status}</Text> : null}
     {reports.map((report) => <Text key={report.name} style={report.ok ? styles.ok : styles.missing}>{report.ok ? '✓' : '✗'} {report.name}: {report.detail}</Text>)}
-    {repository && missing.length > 0 ? <Text style={styles.missing}>Ainda falta no environment agents: {missing.join(', ')}. O app envia sozinho o que ele já tem; o resto você cadastra em Settings → Environments → agents.</Text> : null}
-    {repository && missing.includes('CLAUDE_CODE_OAUTH_TOKEN') ? <Link href="/setup-claude-subscription" style={styles.link}>Guardar o token do Claude neste aparelho</Link> : null}
+    {repository && missing.length > 0 ? <Text style={styles.missing}>Still missing in the agents environment: {missing.join(', ')}. The app sends what it already has; add the rest in Settings → Environments → agents.</Text> : null}
+    {repository && missing.includes('CLAUDE_CODE_OAUTH_TOKEN') ? <Link href="/setup-claude-subscription" style={styles.link}>Save the Claude token on this device</Link> : null}
   </View>
 }
 

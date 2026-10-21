@@ -2,22 +2,22 @@ import { Link } from 'expo-router'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 
 const steps = [
-  ['1. Gerar a credencial', 'Em um ambiente que execute Claude Code, rode claude setup-token e conclua o login oficial da sua conta Claude Pro ou Max. Copie o token exibido.'],
-  ['2. Guardar no GitHub', 'No repositório, abra Settings → Secrets and variables → Actions → New repository secret. Use o nome CLAUDE_CODE_OAUTH_TOKEN e cole o token. Nunca o coloque em Issue, commit ou chat.'],
-  ['3. Criar a tarefa', 'No GitHub, abra uma Issue descrevendo a tarefa e inclua @claude no título ou texto. O workflow Claude Code será iniciado automaticamente.'],
-  ['4. Revisar o resultado', 'Claude responde no GitHub e pode criar uma branch ou pull request. Revise o diff e aprove o merge somente quando estiver satisfeito.'],
-  ['5. Renovar quando necessário', 'Se o workflow acusar autenticação inválida, gere outro token pelo fluxo oficial e substitua o GitHub Secret.']
+  ['1. Generate the credential', 'In an environment that runs Claude Code, run claude setup-token and finish the official login for your Claude Pro or Max account. Copy the token shown.'],
+  ['2. Store it in GitHub', 'In the repository, open Settings → Secrets and variables → Actions → New repository secret. Use the name CLAUDE_CODE_OAUTH_TOKEN and paste the token. Never put it in an Issue, commit or chat.'],
+  ['3. Create the task', 'On GitHub, open an Issue describing the task and include @claude in the title or text. The Claude Code workflow starts automatically.'],
+  ['4. Review the result', 'Claude replies on GitHub and may create a branch or pull request. Review the diff and approve the merge only when you are satisfied.'],
+  ['5. Renew when needed', 'If the workflow reports invalid authentication, generate another token through the official flow and replace the GitHub secret.']
 ]
 
 export default function ClaudeGuideScreen() {
   return <ScrollView contentContainerStyle={styles.page}>
     <Text style={styles.eyebrow}>CLAUDE PRO / MAX</Text>
-    <Text style={styles.title}>Usar assinatura no GitHub</Text>
-    <Text style={styles.copy}>A assinatura é usada pelo Claude Code no GitHub Actions. O aplicativo não guarda sua credencial Claude.</Text>
+    <Text style={styles.title}>Use your subscription on GitHub</Text>
+    <Text style={styles.copy}>The subscription is used by Claude Code in GitHub Actions. The app does not store your Claude credential.</Text>
     {steps.map(([title, text]) => <View key={title} style={styles.card}><Text style={styles.cardTitle}>{title}</Text><Text style={styles.cardText}>{text}</Text></View>)}
-    <View style={styles.warning}><Text style={styles.warningTitle}>Importante</Text><Text style={styles.cardText}>O token é uma credencial sensível. Este app não consegue gerá-lo: a Anthropic exige o login pelo Claude Code. Depois de salvo como Secret, todo o uso diário pode ser feito pelo GitHub e pelo celular.</Text></View>
-    <Link href="/setup-claude-subscription" style={styles.link}>Enviar token cifrado ao GitHub</Link>
-    <Link href="/connect-claude" style={styles.link}>Ver conexão Claude API</Link>
+    <View style={styles.warning}><Text style={styles.warningTitle}>Important</Text><Text style={styles.cardText}>The token is a sensitive credential. This app cannot generate it: Anthropic requires login through Claude Code. Once saved as a secret, daily use can be done from GitHub and the phone.</Text></View>
+    <Link href="/setup-claude-subscription" style={styles.link}>Send encrypted token to GitHub</Link>
+    <Link href="/connect-claude" style={styles.link}>See Claude API connection</Link>
   </ScrollView>
 }
 
