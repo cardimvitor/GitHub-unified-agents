@@ -228,12 +228,19 @@ export default function SharedChatScreen() {
       <Pressable onPress={() => setShowChats((value) => !value)} style={styles.chatTitle}>
         <Text numberOfLines={1} style={styles.chatTitleText}>{active?.title ?? 'New chat'} ▾</Text>
       </Pressable>
-      <Pressable onPress={() => setSetupOpen((value) => !value)} style={styles.chatSetup}>
-        <Text style={styles.buttonText}>{setupOpen ? 'Hide setup' : 'Setup'}</Text>
-      </Pressable>
       <Pressable onPress={newConversation} style={styles.chatNew}>
         <Text style={styles.buttonText}>New chat</Text>
       </Pressable>
+    </View>
+    <View style={styles.chatBar}>
+      <Pressable onPress={() => setSetupOpen((value) => !value)} style={styles.chatSetup}>
+        <Text style={styles.buttonText}>{setupOpen ? 'Hide setup' : 'Setup'}</Text>
+      </Pressable>
+      <Link href="/agents" asChild>
+        <Pressable style={styles.chatSetup}>
+          <Text style={styles.buttonText}>Issues and agents</Text>
+        </Pressable>
+      </Link>
     </View>
     {showChats ? <ScrollView style={styles.chatList} nestedScrollEnabled>
       {[...history.chats].sort((a, b) => b.updatedAt - a.updatedAt).map((chat) => <View key={chat.id} style={styles.chatRow}>
@@ -263,7 +270,17 @@ export default function SharedChatScreen() {
       </Pressable>)}
     </View> : null}
 
+    {planning ? <RepositoryPanel repository={repository} githubConnected={githubConnected} onChange={setRepository} /> : null}
 
+    <Text style={styles.modelHint}>{modelsError ?? (modelState ? 'Models available. Tap one to use it for the next message.' : 'Loading models…')}</Text>
+    {modelState ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modelScroll} contentContainerStyle={styles.modelRow}>
+      <Pressable onPress={() => void chooseModel(null)} style={[styles.modelChip, !modelState.selected && styles.chipSelected]}>
+        <Text style={[styles.chipText, !modelState.selected && styles.chipTextSelected]}>Automatic</Text>
+      </Pressable>
+      {modelState.models.map((model) => <Pressable key={model} onPress={() => void chooseModel(model)} style={[styles.modelChip, modelState.selected === model && styles.chipSelected]}>
+        <Text style={[styles.chipText, modelState.selected === model && styles.chipTextSelected]}>{model}</Text>
+      </Pressable>)}
+    </ScrollView> : null}
     </ScrollView> : null}
 
     <ScrollView ref={messagesRef} style={styles.messages} contentContainerStyle={styles.messagesContent} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: true })}>
