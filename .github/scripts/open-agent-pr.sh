@@ -74,7 +74,7 @@ BODY="$(mktemp)"
   echo "---"
   echo "_Gerado pelo agente ${AGENT} a partir da Issue #${ISSUE}. Revise antes de aprovar._"
 } > "$BODY"
-URL="$(gh pr create --draft --base "$BASE" --head "$BRANCH" --title "${AGENT}: issue #${ISSUE}" --body-file "$BODY")"
+URL="$(gh pr create --base "$BASE" --head "$BRANCH" --title "${AGENT}: issue #${ISSUE}" --body-file "$BODY")"
 echo "PR: $URL"
 fi
 
