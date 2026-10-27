@@ -2,6 +2,7 @@ import { AGENTS_ENVIRONMENT } from '@/github/environments'
 import { setEnvironmentSecret } from '@/github/secrets'
 import { currentChatGptSession } from '@/openai/chatgpt-subscription'
 import { agentCredentials } from '@/storage/agent-credentials'
+import { approverSession } from '@/storage/approver-session'
 import { chatGptSession, type ChatGptPlanSession } from '@/storage/chatgpt-session'
 import { providerCredentials } from '@/storage/provider-credentials'
 
@@ -62,6 +63,10 @@ export async function pushAgentSecrets(token: string, repositoryId: number): Pro
       reports.push({ name: 'CODEX_AUTH_JSON', ok: false, detail: error instanceof Error ? error.message : 'invalid ChatGPT session' })
     }
   } else reports.push({ name: 'OPENAI_API_KEY', ok: false, detail: 'conecte o ChatGPT ou a OpenAI API no app' })
+
+  // Conta que aprova os PRs dos agentes. Só vai se o usuário conectou essa conta no app.
+  const approver = await approverSession.read()
+  if (approver) reports.push(await push(token, repositoryId, 'APPROVER_TOKEN', approver))
 
   return reports
 }

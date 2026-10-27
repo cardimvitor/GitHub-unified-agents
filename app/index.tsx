@@ -47,6 +47,11 @@ export default function HomeScreen() {
           </Pressable>
         </Link>
       </View>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Approver account</Text>
+        <Text style={styles.muted}>Approves agent pull requests. Use a separate GitHub account.</Text>
+        <Link href="/connect-approver" asChild><Pressable style={styles.button}><Text style={styles.buttonText}>Set up approver</Text></Pressable></Link>
+      </View>
       <Card title="DeepSeek" connected={deepSeekConnected} route="/connect-deepseek" />
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Claude</Text><Text style={styles.status}>{claudeConnected ? 'API connected on this device' : 'Subscription or API'}</Text>

@@ -24,6 +24,7 @@ export default function RootLayout() {
         <Stack.Screen name="chat" options={{ title: 'Planejamento compartilhado' }} />
         <Stack.Screen name="agents" options={{ title: 'Issues and agents' }} />
         <Stack.Screen name="issue" options={{ title: 'Issue' }} />
+        <Stack.Screen name="connect-approver" options={{ title: 'Approver account' }} />
       </Stack>
     </KeyboardProvider>
   )
