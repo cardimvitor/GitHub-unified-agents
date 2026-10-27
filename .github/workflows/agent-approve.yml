@@ -1,0 +1,30 @@
+name: Approve agent pull requests
+
+# Aprova o PR do agente quando o Copilot revisou e não há pendências, e liga o merge automático.
+# Usa a conta de aprovação (APPROVER_TOKEN): o github-actions[bot] não pode aprovar o próprio PR.
+# Na dúvida (revisão pendente, comentário aberto, check vermelho ou em andamento) o PR fica para revisão humana.
+
+on:
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: approve-agent-prs
+  cancel-in-progress: false
+
+jobs:
+  approve:
+    runs-on: ubuntu-latest
+    environment: agents
+    steps:
+      - name: Approve ready agent pull requests
+        env:
+          GH_TOKEN: ${{ secrets.APPROVER_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: bash .github/scripts/approve-agent-pr.sh

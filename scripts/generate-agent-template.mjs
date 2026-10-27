@@ -10,6 +10,8 @@ const FILES = [
   '.agents/handoffs/.gitkeep',
   '.github/scripts/agent-board.sh',
   '.github/scripts/open-agent-pr.sh',
+  '.github/scripts/approve-agent-pr.sh',
+  '.github/workflows/agent-approve.yml',
   '.github/workflows/agents.yml',
   '.github/workflows/claude-code.yml'
 ]
